@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Popup Opener</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;background:#f3f4f6;margin:0}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center}
+    .modal{background:white;padding:24px;border-radius:8px;max-width:480px;width:90%;box-shadow:0 8px 24px rgba(0,0,0,0.2);text-align:center}
+    h2{margin:0 0 12px}
+    p{margin:0 0 18px;color:#333}
+    button{background:#0b5fff;color:white;border:0;padding:12px 18px;border-radius:6px;font-size:16px;cursor:pointer}
+    a.fallback{display:inline-block;margin-top:12px;color:#0b5fff}
+  </style>
+</head>
+<body>
+  <div class="overlay" id="overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2>Try the updated demo</h2>
+      <p>Click the button below to open the demo in a new tab. If your browser blocks popups, use the fallback link.</p>
+      <button id="openDemo">Open Demo in New Tab</button>
+      <div>
+        <a class="fallback" id="fallbackLink" href="index.html" target="_blank" rel="noopener">Open demo (fallback link)</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const btn = document.getElementById('openDemo');
+    const overlay = document.getElementById('overlay');
+    const fallback = document.getElementById('fallbackLink');
+
+    function openDemo() {
+      const w = window.open('/Main/index.html', '_blank', 'noopener');
+      if (w) {
+        // close modal if opened
+        overlay.style.display = 'none';
+      } else {
+        // popup blocked — show instruction
+        alert('Popup blocked. Use the "Open demo (fallback link)" link.');
+      }
+    }
+
+    btn.addEventListener('click', openDemo);
+
+    // Try to open automatically once (most browsers will block this).
+    window.addEventListener('load', () => {
+      try {
+        const w = window.open('/Main/index.html', '_blank', 'noopener');
+        if (w) overlay.style.display = 'none';
+      } catch (e) {
+        // ignore
+      }
+    });
+  </script>
+</body>
+</html>
