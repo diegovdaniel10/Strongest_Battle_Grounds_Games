@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Map Zone Mapper</title>
+  <style>
+    body{ margin:0; font-family:Arial,Helvetica,sans-serif; background:#07121a; color:#e7eef6; display:flex; flex-direction:column; align-items:center; padding:12px; }
+    canvas{ border:1px solid rgba(255,255,255,0.06); background:#111827; }
+    #controls{ margin-top:8px; display:flex; gap:8px; }
+    button{ padding:6px 10px; border-radius:6px; border:none; cursor:pointer; background:#0f2530; color:#fff; }
+    .hint{ color:#98a0b3; margin-top:6px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <h2>Map Mapper — click and drag markers to position zones</h2>
+  <canvas id="mapCanvas" width="900" height="600"></canvas>
+  <div id="controls">
+    <button id="export">Export JSON</button>
+    <button id="download">Download spawnZones.json</button>
+  </div>
+  <div class="hint">Markers: A,B,C,D,E,F,G,H,Center. Drag to move, then export and copy JSON into app.js or save spawnZones.json in the same folder.</div>
+  <script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.src = 'map.png';
+    const zones = [
+      {name:'A', x:160, y:90, r:60},
+      {name:'B', x:460, y:90, r:60},
+      {name:'C', x:760, y:120, r:60},
+      {name:'D', x:760, y:360, r:60},
+      {name:'E', x:140, y:360, r:60},
+      {name:'F', x:760, y:520, r:60},
+      {name:'G', x:460, y:520, r:60},
+      {name:'H', x:140, y:520, r:60},
+      {name:'Center', x:460, y:300, r:90}
+    ];
+
+    let drag = null, offset = {x:0,y:0};
+    img.onload = () => { draw(); };
+
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      zones.forEach(z=>{
+        // circle
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 2;
+        ctx.arc(z.x,z.y,z.r,0,Math.PI*2);
+        ctx.stroke();
+        // center
+        ctx.fillStyle = '#ffcc33';
+        ctx.fillRect(z.x-8,z.y-8,16,16);
+        ctx.fillStyle = '#000';
+        ctx.font = '14px sans-serif';
+        ctx.fillText(z.name, z.x - 6, z.y + 4);
+      });
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      for(let z of zones){
+        if(Math.hypot(mx - z.x, my - z.y) < 18){ drag = z; offset.x = mx - z.x; offset.y = my - z.y; break; }
+      }
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if(!drag) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      drag.x = Math.max(8, Math.min(canvas.width-8, mx - offset.x));
+      drag.y = Math.max(8, Math.min(canvas.height-8, my - offset.y));
+      draw();
+    });
+    canvas.addEventListener('mouseup', ()=> drag = null);
+    canvas.addEventListener('mouseleave', ()=> drag = null);
+
+    document.getElementById('export').addEventListener('click', () => {
+      const json = JSON.stringify(zones.map(z=>({ name:z.name, px: Math.round(z.x), py: Math.round(z.y), r: Math.round(z.r) })), null, 2);
+      prompt('Copy spawnZones JSON:', json);
+    });
+
+    document.getElementById('download').addEventListener('click', () => {
+      const json = JSON.stringify(zones.map(z=>({ name:z.name, px: Math.round(z.x), py: Math.round(z.y), r: Math.round(z.r) })), null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'spawnZones.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
