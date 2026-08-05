@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ARENA BRAWL — Open World RPG</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
+html, body { width:100%; height:100%; overflow:hidden; background:#050508; font-family:'Arial Black','Segoe UI',sans-serif; touch-action:none; }
+canvas { display:block; }
+.hidden { display:none !important; }
+
+/* === LOADING === */
+#load { position:fixed; inset:0; z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#050508; color:#f0a020; }
+#loadBar { width:300px; height:5px; background:#222; border-radius:3px; margin-top:16px; overflow:hidden; }
+#loadFill { width:0%; height:100%; background:linear-gradient(90deg,#f0a020,#ffd700); transition:width .3s; }
+#loadTxt { color:#666; font-size:12px; margin-top:10px; letter-spacing:1px; }
+
+/* === MAIN MENU === */
+#menu { position:fixed; inset:0; z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(135deg,#050508,#0d0d18); }
+#menu h1 { font-size:44px; color:#f0a020; text-shadow:0 0 30px rgba(240,160,32,0.4); letter-spacing:6px; }
+#menu h2 { font-size:13px; color:#444; margin:6px 0 36px; letter-spacing:4px; }
+.mbtn { width:260px; padding:14px; margin:5px; background:rgba(25,25,40,0.9); border:2px solid #333; color:#ddd; font-size:15px; border-radius:8px; cursor:pointer; letter-spacing:1px; transition:all .15s; font-family:inherit; }
+.mbtn:hover { border-color:#f0a020; transform:scale(1.03); }
+.mbtn.pri { background:linear-gradient(135deg,#f0a020,#e08010); color:#000; border-color:#f0a020; font-weight:bold; }
+
+/* === CHAR SELECT === */
+#csel { position:fixed; inset:0; z-index:100; display:none; flex-direction:column; background:linear-gradient(135deg,#080810,#12121c); align-items:center; overflow-y:auto; }
+#csel h2 { color:#f0a020; font-size:22px; margin:14px 0; letter-spacing:2px; text-align:center; }
+#cgrid { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; padding:10px; max-width:900px; }
+.ccard { width:125px; background:rgba(25,25,40,0.9); border:2px solid #333; border-radius:10px; padding:10px; cursor:pointer; transition:all .15s; text-align:center; }
+.ccard:hover { border-color:#f0a020; transform:scale(1.04); }
+.ccard.sel { border-color:#f0a020; box-shadow:0 0 15px rgba(240,160,32,0.35); }
+.ccard .ci { width:48px; height:48px; border-radius:50%; margin:0 auto 6px; display:flex; align-items:center; justify-content:center; font-size:22px; border:2px solid; }
+.ccard .cn { color:#ddd; font-size:11px; font-weight:bold; }
+.ccard .ct { color:#777; font-size:9px; margin-top:2px; }
+.ccard .ce { background:rgba(160,32,32,0.3); color:#f80; font-size:8px; padding:2px 6px; border-radius:4px; display:inline-block; margin-top:3px; }
+#cinfo { max-width:680px; margin:8px auto; padding:12px; background:rgba(12,12,20,0.9); border:1px solid #333; border-radius:8px; max-height:30%; overflow-y:auto; }
+#cinfo h3 { color:#f0a020; font-size:14px; margin-bottom:5px; }
+#cinfo .ml { color:#999; font-size:11px; line-height:1.6; }
+#cinfo .ml b { color:#ddd; }
+#cinfo .pa { color:#f0a020; margin-bottom:4px; font-size:11px; }
+.statr { display:flex; gap:12px; margin-top:6px; font-size:11px; color:#888; }
+.statr span { color:#eee; }
+#startB { margin:8px auto 16px; padding:11px 40px; background:linear-gradient(135deg,#f0a020,#e08010); color:#000; border:none; border-radius:8px; font-size:15px; font-weight:bold; cursor:pointer; font-family:inherit; letter-spacing:1px; }
+#startB:hover { filter:brightness(1.1); }
+
+/* === FFXVI HUD === */
+#hud { position:fixed; inset:0; z-index:30; pointer-events:none; display:none; }
+/* HP/MP bars - bottom center FFXVI style */
+#ffHud { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:35; pointer-events:none; display:none; }
+#ffBars { display:flex; align-items:flex-end; gap:0; }
+#ffHpWrap { position:relative; width:280px; }
+#ffHpBg { width:100%; height:22px; background:linear-gradient(180deg,rgba(0,0,0,0.8),rgba(20,0,0,0.9)); border:1px solid #8b6914; border-radius:3px 0 0 3px; overflow:hidden; clip-path:polygon(0 0,100% 0,95% 100%,0 100%); }
+#ffHpFill { height:100%; background:linear-gradient(180deg,#ff4444,#cc2222); transition:width .3s; width:100%; }
+#ffHpTxt { position:absolute; top:2px; left:10px; color:#fff; font-size:11px; text-shadow:1px 1px 2px #000; letter-spacing:1px; }
+#ffMpWrap { position:relative; width:200px; margin-left:-8px; }
+#ffMpBg { width:100%; height:16px; background:linear-gradient(180deg,rgba(0,0,0,0.8),rgba(0,10,30,0.9)); border:1px solid #8b6914; border-radius:0 3px 3px 0; overflow:hidden; clip-path:polygon(5% 0,100% 0,100% 100%,0 100%); }
+#ffMpFill { height:100%; background:linear-gradient(180deg,#4488ff,#2266cc); transition:width .3s; width:0%; }
+#ffMpTxt { position:absolute; top:1px; left:15px; color:#aad; font-size:10px; text-shadow:1px 1px 2px #000; }
+
+/* Ability fan - FFXVI arc */
+#ffAbi { display:flex; justify-content:center; gap:6px; margin-top:8px; }
+.ffAbiSlot { width:42px; height:42px; background:rgba(15,15,25,0.9); border:2px solid #8b6914; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; }
+.ffAbiSlot.ready { border-color:#f0a020; box-shadow:0 0 8px rgba(240,160,32,0.3); }
+.ffAbiSlot .ak { color:#f0a020; font-size:11px; font-weight:bold; }
+.ffAbiSlot .an { color:#888; font-size:7px; text-align:center; line-height:1; }
+.ffAbiSlot .acd { position:absolute; bottom:0; left:0; width:100%; background:rgba(0,0,0,0.7); border-radius:0 0 50% 50%; }
+
+/* Portrait - top left */
+#ffPortrait { position:fixed; top:10px; left:10px; z-index:35; pointer-events:none; display:none; display:flex; align-items:center; gap:8px; }
+#ffPFrame { width:56px; height:56px; border:2px solid #8b6914; border-radius:8px; background:rgba(15,15,25,0.9); display:flex; align-items:center; justify-content:center; font-size:28px; }
+#ffPInfo { color:#ddd; font-size:11px; text-shadow:1px 1px 2px #000; }
+#ffPInfo .pn { color:#f0a020; font-size:13px; font-weight:bold; }
+#ffPInfo .pl { color:#888; }
+
+/* Enemy HP bar - bottom center above player */
+#ffEnemy { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); z-index:34; pointer-events:none; display:none; text-align:center; }
+#ffEnemyNm { color:#ff6666; font-size:12px; text-shadow:1px 1px 2px #000; margin-bottom:3px; letter-spacing:1px; }
+#ffEnemyBg { width:220px; height:14px; background:rgba(0,0,0,0.8); border:1px solid #553333; border-radius:3px; overflow:hidden; margin:0 auto; }
+#ffEnemyFill { height:100%; background:linear-gradient(180deg,#ff3333,#cc1111); transition:width .3s; width:100%; }
+
+/* Quest tracker - right side */
+#ffQuest { position:fixed; top:10px; right:14px; z-index:34; pointer-events:none; display:none; max-width:260px; text-align:right; }
+#ffQuest .qt { color:#f0a020; font-size:12px; font-weight:bold; text-shadow:1px 1px 2px #000; margin-bottom:3px; letter-spacing:1px; }
+#ffQuest .qd { color:#aaa; font-size:10px; text-shadow:1px 1px 2px #000; line-height:1.4; }
+#ffQuest .qp { color:#22c55e; font-size:10px; margin-top:2px; }
+
+/* Minimap */
+#minimap { position:fixed; top:10px; right:14px; z-index:33; pointer-events:none; display:none; }
+#mmCanvas { width:140px; height:140px; border:2px solid #8b6914; border-radius:50%; background:rgba(5,5,15,0.8); }
+
+/* Location name */
+#locName { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:33; pointer-events:none; display:none; text-align:center; }
+#locName .ln { color:#f0a020; font-size:28px; text-shadow:0 0 15px rgba(240,160,32,0.4); letter-spacing:4px; }
+#locName .ls { color:#888; font-size:13px; letter-spacing:2px; margin-top:4px; }
+
+/* Combo */
+#combo { position:fixed; top:45%; left:50%; transform:translateX(-50%); z-index:32; pointer-events:none; text-align:center; }
+#combo .cc { font-size:26px; color:#f0a020; text-shadow:0 0 10px rgba(240,160,32,0.5); display:none; }
+#combo .cc.show { display:block; animation:cp .3s; }
+@keyframes cp { 0%{transform:scale(1.5)} 100%{transform:scale(1)} }
+#combo .mn { font-size:12px; color:#fff; text-shadow:1px 1px 2px #000; }
+
+/* Floating combat text */
+#floatText { position:fixed; inset:0; z-index:36; pointer-events:none; }
+.ft { position:absolute; font-size:16px; font-weight:bold; text-shadow:1px 1px 3px #000; animation:floatUp 1s ease-out forwards; }
+.ft.crit { color:#fbbf24; font-size:22px; }
+.ft.dmg { color:#ff5555; }
+.ft.heal { color:#22dd55; }
+.ft.xp { color:#44aaff; }
+.ft.miss { color:#888; }
+@keyframes floatUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-50px)} }
+
+/* Level up */
+#lvUp { position:fixed; top:35%; left:50%; transform:translate(-50%,-50%); z-index:45; display:none; text-align:center; pointer-events:none; }
+#lvUp .lt { font-size:30px; color:#fbbf24; text-shadow:0 0 20px rgba(251,191,36,0.5); }
+#lvUp .ll { font-size:16px; color:#fff; margin-top:4px; }
+#lvUp .ls2 { font-size:13px; color:#f0a020; margin-top:6px; }
+
+/* Wave/streak announce */
+#ann { position:fixed; top:28%; left:50%; transform:translate(-50%,-50%); z-index:40; pointer-events:none; opacity:0; transition:opacity .3s; text-align:center; }
+#ann .at { font-size:36px; color:#f0a020; text-shadow:0 0 20px rgba(240,160,32,0.4); letter-spacing:3px; }
+#ann .as { font-size:16px; color:#fff; margin-top:4px; }
+#ann.streak .at { color:#ff4444; }
+#ann.rampage .at { color:#ff00ff; }
+#ann.godlike .at { color:#ffd700; }
+
+/* === INVENTORY (Genshin Style) === */
+#inv { position:fixed; inset:0; z-index:200; display:none; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; }
+#invPanel { width:680px; max-width:95vw; max-height:90vh; background:rgba(15,15,25,0.97); border:2px solid #8b6914; border-radius:12px; padding:16px; overflow-y:auto; }
+#invPanel h2 { color:#f0a020; font-size:18px; margin-bottom:12px; letter-spacing:2px; }
+.inv-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.inv-tab { padding:6px 14px; background:rgba(30,30,45,0.8); border:1px solid #444; color:#888; border-radius:6px; cursor:pointer; font-size:12px; font-family:inherit; }
+.inv-tab.active { background:rgba(240,160,32,0.2); border-color:#f0a020; color:#f0a020; }
+/* Equipment slots */
+.eq-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+.eq-slot { background:rgba(30,30,45,0.8); border:2px solid #444; border-radius:8px; padding:10px; text-align:center; min-height:70px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; }
+.eq-slot:hover { border-color:#f0a020; }
+.eq-slot .es-type { color:#666; font-size:9px; text-transform:uppercase; letter-spacing:1px; }
+.eq-slot .es-name { color:#ddd; font-size:12px; font-weight:bold; margin-top:3px; }
+.eq-slot .es-stat { color:#888; font-size:10px; margin-top:2px; }
+.eq-slot.empty .es-name { color:#444; }
+.rarity-common { border-color:#666 !important; }
+.rarity-rare { border-color:#4488ff !important; }
+.rarity-epic { border-color:#aa44ff !important; }
+.rarity-legendary { border-color:#ffaa00 !important; box-shadow:0 0 8px rgba(255,170,0,0.2); }
+/* Item grid */
+.item-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); gap:8px; }
+.item-cell { width:64px; height:64px; background:rgba(30,30,45,0.8); border:2px solid #444; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; position:relative; }
+.item-cell:hover { border-color:#f0a020; transform:scale(1.05); }
+.item-cell .ii { font-size:24px; }
+.item-cell .iq { color:#fff; font-size:9px; font-weight:bold; }
+.item-cell .iname { color:#ddd; font-size:8px; text-align:center; line-height:1; margin-top:2px; padding:0 2px; }
+/* Item tooltip */
+#invTip { position:fixed; z-index:210; display:none; background:rgba(10,10,20,0.97); border:1px solid #8b6914; border-radius:6px; padding:10px; max-width:240px; pointer-events:none; }
+#invTip h4 { color:#f0a020; font-size:13px; margin-bottom:4px; }
+#invTip .it-type { color:#888; font-size:10px; margin-bottom:6px; }
+#invTip .it-stat { color:#aad; font-size:11px; line-height:1.6; }
+#invTip .it-desc { color:#999; font-size:10px; margin-top:4px; font-style:italic; }
+#invTip .it-btn { margin-top:8px; display:flex; gap:6px; }
+#invTip .it-btn button { padding:4px 10px; border:1px solid #8b6914; background:rgba(30,30,45,0.9); color:#f0a020; border-radius:4px; cursor:pointer; font-size:11px; font-family:inherit; }
+#invTip .it-btn button:hover { background:rgba(240,160,32,0.2); }
+#invClose { position:absolute; top:10px; right:14px; background:#333; color:#fff; border:none; border-radius:4px; padding:5px 12px; cursor:pointer; font-size:12px; }
+
+/* === QUEST / MISSION UI === */
+#questLog { position:fixed; inset:0; z-index:200; display:none; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; }
+#questPanel { width:500px; max-width:95vw; max-height:80vh; background:rgba(15,15,25,0.97); border:2px solid #8b6914; border-radius:12px; padding:16px; overflow-y:auto; }
+#questPanel h2 { color:#f0a020; font-size:18px; margin-bottom:12px; letter-spacing:2px; }
+.quest-item { background:rgba(30,30,45,0.7); border:1px solid #444; border-radius:8px; padding:12px; margin-bottom:10px; }
+.quest-item.active { border-color:#f0a020; }
+.quest-item .qtitle { color:#ddd; font-size:14px; font-weight:bold; }
+.quest-item .qdesc { color:#999; font-size:11px; margin-top:4px; line-height:1.5; }
+.quest-item .qprog { color:#22c55e; font-size:11px; margin-top:4px; }
+.quest-item .qreward { color:#f0a020; font-size:11px; margin-top:4px; }
+.quest-item .qdone { color:#22c55e; font-size:12px; }
+#questClose { position:absolute; top:10px; right:14px; background:#333; color:#fff; border:none; border-radius:4px; padding:5px 12px; cursor:pointer; font-size:12px; }
+
+/* NPC dialog */
+#npcDialog { position:fixed; bottom:0; left:0; width:100%; z-index:150; display:none; background:rgba(0,0,0,0.9); border-top:2px solid #8b6914; padding:20px 40px; }
+#npcDialog .npcn { color:#f0a020; font-size:16px; font-weight:bold; margin-bottom:8px; }
+#npcDialog .npct { color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px; }
+#npcDialog .npcb { display:flex; gap:10px; }
+#npcDialog .npcbtn { padding:8px 20px; background:rgba(30,30,45,0.9); border:1px solid #8b6914; color:#f0a020; border-radius:6px; cursor:pointer; font-size:13px; font-family:inherit; }
+#npcDialog .npcbtn:hover { background:rgba(240,160,32,0.2); }
+#npcDialog .npcbtn.accept { background:rgba(34,197,94,0.2); border-color:#22c55e; color:#22c55e; }
+
+/* Settings */
+#gear { position:fixed; top:10px; right:10px; width:40px; height:40px; background:rgba(15,15,25,0.9); border:2px solid #8b6914; border-radius:8px; cursor:pointer; z-index:150; display:none; align-items:center; justify-content:center; font-size:20px; color:#aaa; transition:all .2s; }
+#gear:hover { border-color:#f0a020; color:#f0a020; }
+#set2 { position:fixed; top:0; right:-360px; width:320px; height:100%; background:rgba(12,12,20,0.97); border-left:2px solid #333; z-index:160; transition:right .3s; overflow-y:auto; padding:16px; }
+#set2.open { right:0; }
+#set2 h2 { color:#f0a020; font-size:16px; margin-bottom:14px; }
+.s2s { margin-bottom:18px; }
+.s2s h3 { color:#777; font-size:11px; margin-bottom:8px; text-transform:uppercase; }
+.s2r { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:#bbb; font-size:12px; }
+.s2r label { flex:1; }
+.s2r select, .s2r input[type=range] { background:#222; color:#eee; border:1px solid #444; border-radius:4px; padding:3px 6px; font-size:11px; }
+.s2r select { width:110px; }
+.s2r input[type=range] { width:110px; accent-color:#f0a020; }
+.s2r .v { width:34px; text-align:right; color:#f0a020; font-size:11px; }
+.s2close { position:absolute; top:10px; right:10px; background:#333; color:#fff; border:none; border-radius:4px; padding:5px 10px; cursor:pointer; font-size:11px; }
+
+/* Mobile */
+#mob { position:fixed; bottom:0; left:0; width:100%; z-index:40; display:none; pointer-events:auto; }
+#mob.show { display:flex; }
+.mbl, .mbr { flex:1; display:flex; gap:6px; padding:8px; align-items:flex-end; }
+.mbr { justify-content:flex-end; flex-wrap:wrap-reverse; }
+.mb { width:52px; height:52px; border-radius:50%; border:2px solid #555; background:rgba(15,15,25,0.7); color:#eee; font-size:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-family:inherit; font-weight:bold; }
+.mb:active { background:rgba(240,160,32,0.5); border-color:#f0a020; transform:scale(.9); }
+.mb.a { background:rgba(220,50,50,0.5); } .mb.j { background:rgba(50,150,250,0.5); }
+.mb.d { background:rgba(50,200,100,0.5); } .mb.s { background:rgba(160,100,240,0.5); }
+.mb.i { background:rgba(240,160,32,0.3); } .mb.q { background:rgba(100,200,255,0.3); }
+
+/* Game over */
+#go { position:fixed; inset:0; z-index:60; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); }
+#go h1 { font-size:36px; color:#f0a020; margin-bottom:10px; }
+#go p { color:#ccc; font-size:15px; margin-bottom:16px; text-align:center; }
+#go .gob { padding:10px 30px; margin:4px; background:rgba(30,30,45,0.9); border:2px solid #444; color:#ddd; border-radius:8px; cursor:pointer; font-size:14px; font-family:inherit; }
+#go .gob.pri { background:#f0a020; color:#000; border-color:#f0a020; font-weight:bold; }
+
+/* Interact prompt */
+#prompt { position:fixed; bottom:120px; left:50%; transform:translateX(-50%); z-index:32; pointer-events:none; display:none; color:#f0a020; font-size:14px; text-shadow:1px 1px 3px #000; background:rgba(0,0,0,0.6); padding:6px 16px; border-radius:6px; border:1px solid #8b6914; }
+
+/* === ADMIN / CHAT / OWNER === */
+#chatBtn{position:fixed;bottom:14px;right:14px;width:44px;height:44px;background:rgba(15,15,25,0.95);border:2px solid #8b6914;border-radius:50%;cursor:pointer;z-index:150;display:none;align-items:center;justify-content:center;font-size:20px;color:#f0a020;}
+#chatBtn:hover{box-shadow:0 0 10px rgba(240,160,32,0.4);}
+#chatPanel{position:fixed;bottom:70px;right:14px;width:300px;height:360px;background:rgba(12,12,20,0.97);border:2px solid #8b6914;border-radius:12px;z-index:160;display:none;flex-direction:column;overflow:hidden;}
+#chatPanel.open{display:flex;}
+#chatHeader{padding:10px 14px;background:rgba(240,160,32,0.1);border-bottom:1px solid #8b6914;color:#f0a020;font-size:13px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;}
+#chatMsgs{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;}
+#chatMsgs::-webkit-scrollbar{width:4px;}#chatMsgs::-webkit-scrollbar-thumb{background:#8b6914;border-radius:2px;}
+.chat-msg{padding:6px 10px;border-radius:6px;font-size:11px;line-height:1.4;max-width:85%;}
+.chat-msg.player{background:rgba(240,160,32,0.15);border:1px solid rgba(240,160,32,0.3);color:#ffd;align-self:flex-end;}
+.chat-msg.system{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);color:#6f6;align-self:flex-start;}
+.chat-msg.admin{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#faa;align-self:flex-start;}
+.chat-msg .cn{font-size:9px;opacity:.7;margin-bottom:2px;}
+#chatInput{display:flex;border-top:1px solid #8b6914;padding:6px;}
+#chatInput input{flex:1;background:rgba(25,25,40,0.9);border:1px solid #444;color:#eee;border-radius:4px 0 0 4px;padding:6px 8px;font-size:12px;outline:none;font-family:inherit;}
+#chatInput button{padding:6px 10px;background:#f0a020;color:#000;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:12px;font-weight:bold;font-family:inherit;}
+
+/* Admin Panel */
+#adminPanel{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);}
+#adminBox{width:600px;max-width:96vw;max-height:90vh;background:rgba(10,10,20,0.99);border:2px solid #ef4444;border-radius:12px;padding:20px;overflow-y:auto;}
+#adminBox h2{color:#ef4444;font-size:18px;margin-bottom:14px;letter-spacing:2px;display:flex;align-items:center;gap:8px;}
+.admin-section{background:rgba(25,15,15,0.8);border:1px solid #553333;border-radius:8px;padding:12px;margin-bottom:12px;}
+.admin-section h3{color:#f87171;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.admin-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:#ccc;font-size:12px;}
+.admin-row label{flex:1;}
+.admin-row input,.admin-row select{background:#1a1a2a;color:#eee;border:1px solid #553;border-radius:4px;padding:4px 8px;font-size:12px;width:130px;}
+.admin-btn{padding:6px 14px;background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#ef4444;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;margin:3px;}
+.admin-btn:hover{background:rgba(239,68,68,0.35);}
+.admin-btn.green{border-color:#22c55e;color:#22c55e;background:rgba(34,197,94,0.15);}
+.admin-btn.green:hover{background:rgba(34,197,94,0.3);}
+.admin-btn.gold{border-color:#f0a020;color:#f0a020;background:rgba(240,160,32,0.15);}
+.admin-log{background:#0a0a12;border:1px solid #333;border-radius:4px;padding:8px;height:80px;overflow-y:auto;font-size:10px;color:#888;font-family:monospace;}
+
+/* Owner Panel */
+#ownerPanel{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.92);}
+#ownerBox{width:660px;max-width:96vw;max-height:92vh;background:rgba(5,5,15,0.99);border:2px solid #ffd700;border-radius:12px;padding:20px;overflow-y:auto;}
+#ownerBox h2{color:#ffd700;font-size:20px;margin-bottom:4px;letter-spacing:3px;}
+#ownerBox .ow-sub{color:#888;font-size:11px;margin-bottom:16px;letter-spacing:2px;}
+.owner-section{background:rgba(20,18,5,0.9);border:1px solid #6b5800;border-radius:8px;padding:14px;margin-bottom:12px;}
+.owner-section h3{color:#ffd700;font-size:13px;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.owner-stat{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1a1800;font-size:12px;color:#ccc;}
+.owner-stat span{color:#ffd700;}
+.owner-btn{padding:8px 18px;margin:4px;background:rgba(255,215,0,0.12);border:1px solid #ffd700;color:#ffd700;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;letter-spacing:1px;}
+.owner-btn:hover{background:rgba(255,215,0,0.25);}
+.owner-btn.danger{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,0.1);}
+.owner-input{background:#0a0a15;color:#eee;border:1px solid #6b5800;border-radius:4px;padding:5px 10px;font-size:12px;width:180px;}
+
+</style>
+</head>
+<body>
+
+<div id="load"><h1 style="font-size:26px;letter-spacing:4px">ARENA BRAWL</h1><div id="loadBar"><div id="loadFill"></div></div><div id="loadTxt">Loading 3D world...</div></div>
+
+<canvas id="gc"></canvas>
+
+<button id="gear">⚙</button>
+<div id="set2">
+  <button class="s2close" id="s2c">✕</button>
+  <h2>SETTINGS</h2>
+  <div class="s2s"><h3>Performance</h3>
+    <div class="s2r"><label>Graphics Mode</label><select id="s2g"><option value="30">30 FPS</option><option value="60" selected>60 FPS</option><option value="120">120 FPS</option></select></div>
+    <div class="s2r"><label>Quality</label><input type="range" id="s2q" min="1" max="3" value="2"><span class="v" id="s2qv">2</span></div>
+    <div class="s2r"><label>Shadows</label><select id="s2sh"><option value="1" selected>On</option><option value="0">Off</option></select></div>
+  </div>
+  <div class="s2s"><h3>Sound</h3>
+    <div class="s2r"><label>Master</label><input type="range" id="s2mv" min="0" max="100" value="70" step="5"><span class="v" id="s2mvv">70%</span></div>
+    <div class="s2r"><label>SFX</label><input type="range" id="s2sv" min="0" max="100" value="80" step="5"><span class="v" id="s2svv">80%</span></div>
+  </div>
+  <div class="s2s"><h3>Controls</h3>
+    <div class="s2r"><label>Mobile</label><select id="s2mo"><option value="auto" selected>Auto</option><option value="on">Always</option><option value="off">Never</option></select></div>
+  </div>
+</div>
+
+<div id="menu">
+  <h1>ARENA BRAWL</h1>
+  <h2>OPEN WORLD RPG</h2>
+  <button class="mbtn pri" id="bRPG">⚔ ENTER WORLD</button>
+  <button class="mbtn" id="bVS">🤺 VS CPU ARENA</button>
+  <button class="mbtn" id="bHow">📖 HOW TO PLAY</button>
+</div>
+
+<div id="csel">
+  <h2>SELECT YOUR FIGHTER</h2>
+  <div id="cgrid"></div>
+  <div id="cinfo"><h3>Select a character</h3><div class="ml">Choose from the roster above.</div></div>
+  <button id="startB">ENTER WORLD</button>
+</div>
+
+<!-- FFXVI HUD -->
+<div id="ffPortrait">
+  <div id="ffPFrame">💪</div>
+  <div id="ffPInfo"><div class="pn" id="fpn">Hero</div><div class="pl" id="fpl">Lv.1</div></div>
+</div>
+
+<div id="ffHud">
+  <div id="ffBars">
+    <div id="ffHpWrap"><div id="ffHpBg"><div id="ffHpFill"></div></div><div id="ffHpTxt">100 / 100</div></div>
+    <div id="ffMpWrap"><div id="ffMpBg"><div id="ffMpFill"></div></div><div id="ffMpTxt">SUPER 0%</div></div>
+  </div>
+  <div id="ffAbi"></div>
+</div>
+
+<div id="ffEnemy">
+  <div id="ffEnemyNm">Enemy</div>
+  <div id="ffEnemyBg"><div id="ffEnemyFill"></div></div>
+</div>
+
+<div id="ffQuest">
+  <div class="qt" id="fqt">No Active Quest</div>
+  <div class="qd" id="fqd"></div>
+  <div class="qp" id="fqp"></div>
+</div>
+
+<div id="minimap"><canvas id="mmCanvas" width="140" height="140"></canvas></div>
+
+<div id="locName"><div class="ln" id="ln"></div><div class="ls" id="ls"></div></div>
+
+<div id="combo"><div class="cc" id="cc">0 HIT</div><div class="mn" id="cmn"></div></div>
+<div id="floatText"></div>
+<div id="lvUp"><div class="lt">⭐ LEVEL UP! ⭐</div><div class="ll" id="lvL">Level 2</div><div class="ls2" id="lvS"></div></div>
+<div id="ann"><div class="at" id="annT"></div><div class="as" id="annS"></div></div>
+
+<!-- Inventory -->
+<div id="inv">
+  <div id="invPanel">
+    <button id="invClose">✕</button>
+    <h2>INVENTORY</h2>
+    <div class="inv-tabs">
+      <div class="inv-tab active" data-tab="equip">EQUIPMENT</div>
+      <div class="inv-tab" data-tab="items">ITEMS</div>
+      <div class="inv-tab" data-tab="mats">MATERIALS</div>
+      <div class="inv-tab" data-tab="craft">CRAFT</div>
+    </div>
+    <div id="invEquip">
+      <h3 style="color:#888;font-size:12px;margin-bottom:8px">EQUIPPED</h3>
+      <div class="eq-grid" id="eqGrid"></div>
+      <h3 style="color:#888;font-size:12px;margin-bottom:8px">BACKPACK</h3>
+      <div class="item-grid" id="equipBag"></div>
+    </div>
+    <div id="invItems" class="hidden"><div class="item-grid" id="itemGrid"></div></div>
+    <div id="invMats" class="hidden"><div class="item-grid" id="matGrid"></div></div>
+  </div>
+</div>
+<div id="invCraft" class="hidden">
+      <h3 style="color:#888;font-size:12px;margin-bottom:8px">CRAFTING — Use Monster Essence to craft equipment</h3>
+      <div style="color:#aaa;font-size:11px;margin-bottom:12px">Monster Essence: <span id="essenceCount" style="color:#f0a020;font-weight:bold">0</span> 🔮</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="background:rgba(30,30,45,0.8);border:2px solid #4488ff;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="color:#4488ff;font-size:13px;font-weight:bold">Random Rare Item</div><div style="color:#888;font-size:10px;margin-top:3px">5 Monster Essence</div></div>
+          <button onclick="window._craft('rare')" style="padding:6px 14px;background:rgba(68,136,255,0.2);border:1px solid #4488ff;color:#4488ff;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">CRAFT</button>
+        </div>
+        <div style="background:rgba(30,30,45,0.8);border:2px solid #aa44ff;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="color:#aa44ff;font-size:13px;font-weight:bold">Random Epic Item</div><div style="color:#888;font-size:10px;margin-top:3px">10 Monster Essence</div></div>
+          <button onclick="window._craft('epic')" style="padding:6px 14px;background:rgba(170,68,255,0.2);border:1px solid #aa44ff;color:#aa44ff;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">CRAFT</button>
+        </div>
+        <div style="background:rgba(30,30,45,0.8);border:2px solid #ffaa00;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="color:#ffaa00;font-size:13px;font-weight:bold">Random Legendary Item</div><div style="color:#888;font-size:10px;margin-top:3px">20 Monster Essence</div></div>
+          <button onclick="window._craft('legendary')" style="padding:6px 14px;background:rgba(255,170,0,0.2);border:1px solid #ffaa00;color:#ffaa00;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">CRAFT</button>
+        </div>
+        <div style="background:rgba(30,30,45,0.8);border:2px solid #22c55e;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="color:#22c55e;font-size:13px;font-weight:bold">Health Potion</div><div style="color:#888;font-size:10px;margin-top:3px">2 Monster Essence</div></div>
+          <button onclick="window._craft('potion')" style="padding:6px 14px;background:rgba(34,197,94,0.2);border:1px solid #22c55e;color:#22c55e;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;">CRAFT</button>
+        </div>
+      </div>
+    </div>
+<div id="invTip"></div>
+
+<!-- Quest log -->
+<div id="questLog">
+  <div id="questPanel">
+    <button id="questClose">✕</button>
+    <h2>QUEST LOG</h2>
+    <div id="questList"></div>
+  </div>
+</div>
+
+<!-- NPC dialog -->
+<div id="npcDialog">
+  <div class="npcn" id="npcN"></div>
+  <div class="npct" id="npcT"></div>
+  <div class="npcb" id="npcB"></div>
+</div>
+
+<div id="prompt">Press <b>F</b> to interact</div>
+
+<div id="go">
+  <h1 id="goT">VICTORY</h1>
+  <p id="goS"></p>
+  <button class="gob pri" id="goR">CONTINUE</button>
+  <button class="gob" id="goM">MAIN MENU</button>
+</div>
+
+<div id="mob">
+  <div class="mbl">
+    <button class="mb" data-k="a">◀</button>
+    <button class="mb" data-k="d">▶</button>
+    <button class="mb" data-k="w">▲</button>
+    <button class="mb" data-k="s">▼</button>
+    <button class="mb i" data-k="i">INV</button>
+    <button class="mb q" data-k="j">QUEST</button>
+    <button class="mb" data-k="t">TRAVEL</button>
+  </div>
+  <div class="mbr">
+    <button class="mb a" data-a="atk">PUNCH</button>
+    <button class="mb j" data-a="jmp">JUMP</button>
+    <button class="mb d" data-a="dsh">DASH</button>
+    <button class="mb s" data-a="skl">SKILL</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+function waitForThree(cb){ if(window.THREE){cb()}else{setTimeout(()=>waitForThree(cb),50)} }
+waitForThree(function(){
+  document.getElementById('loadFill').style.width='30%';
+  document.getElementById('loadTxt').textContent='Building world...';
+  setTimeout(function(){
+    try{ initGame(); }
+    catch(err){
+      document.getElementById('loadTxt').textContent='Error: '+err.message;
+      document.getElementById('loadFill').style.background='#ef4444';
+      console.error('Game init error:',err);
+    }
+  },100);
+});
+
+// === CONFIG ===
+const GRAV=-0.022, MOVE_SP=0.28, DASH_SP=0.7, JUMP_F=0.45, M1_MAX=4, M1_CD=16;
+const ISLAND_R=28; // island radius
+let settings={gfx:60,quality:2,shadows:1,masterVol:0.7,sfxVol:0.8,mobile:'auto'};
+let gameMode='world', gameState='menu', gameFrame=0, lastTime=0, frameAcc=0, frameTime=1000/60;
+let ownerConfig={dmgMult:1.0,xpMult:1.0,lootRate:0.3};
+let canvas,renderer,scene,cam,clock;
+let player3D=null, enemy3D=null, enemies=[], npcs=[], pickups=[], questMarkers=[];
+let selectedIdx=0, curIsland=0, interactTarget=null;
+
+// === ISLANDS ===
+const ISLANDS = [
+  { name:"Beginner's Shore", sub:"Island 1", cx:0, cz:0, color:0x2a4a3a, enemyLevel:1, enemyChar:[0,1,2,3],
+    npc:{name:"Old Master", icon:"🧙", dialog:"Welcome, young fighter! Defeat 3 enemies on this island to prove your strength.", quest:{type:"kill",target:3,reward:{xp:150,item:{id:"iron_sword",name:"Iron Sword",icon:"🗡️",slot:"weapon",rarity:"rare",stats:{atk:5},desc:"A sturdy iron blade."}}}} },
+  { name:"Warrior's Peak", sub:"Island 2", cx:70, cz:0, color:0x4a3a2a, enemyLevel:3, enemyChar:[4,5,6,7],
+    npc:{name:"Arena Champion", icon:"⚔️", dialog:"So you've come to prove yourself? Defeat 5 enemies here, warrior!", quest:{type:"kill",target:5,reward:{xp:300,item:{id:"steel_armor",name:"Steel Armor",icon:"🛡️",slot:"armor",rarity:"epic",stats:{def:8,hp:20},desc:"Forged from the finest steel."}}}} },
+  { name:"Shadow Realm", sub:"Island 3", cx:0, cz:70, color:0x2a1a3a, enemyLevel:5, enemyChar:[2,4,6,8],
+    npc:{name:"Shadow Sage", icon:"🌑", dialog:"The shadows test the strong. Destroy 7 enemies in this dark realm.", quest:{type:"kill",target:7,reward:{xp:500,item:{id:"phantom_boots",name:"Phantom Boots",icon:"👢",slot:"boots",rarity:"epic",stats:{spd:5,dodge:10},desc:"Boots that phase through danger."}}}} },
+  { name:"Celestial Arena", sub:"Island 4", cx:70, cz:70, color:0x3a3a1a, enemyLevel:8, enemyChar:[6,7,8,9],
+    npc:{name:"Celestial Guardian", icon:"✨", dialog:"Only the worthy may enter the Celestial Arena. Defeat 10 enemies to claim the legendary artifact!", quest:{type:"kill",target:10,reward:{xp:1000,item:{id:"dragon_amulet",name:"Dragon Amulet",icon:"📿",slot:"accessory",rarity:"legendary",stats:{atk:10,def:5,crit:15,lifesteal:10},desc:"An ancient amulet pulsing with power."}}}} },
+];
+
+// === EQUIPMENT ITEMS (loot table) ===
+const LOOT_TABLE = [
+  {id:"wood_sword",name:"Wooden Sword",icon:"🗡️",slot:"weapon",rarity:"common",stats:{atk:2},desc:"A basic wooden training sword."},
+  {id:"iron_sword",name:"Iron Sword",icon:"⚔️",slot:"weapon",rarity:"rare",stats:{atk:5},desc:"A sturdy iron blade."},
+  {id:"flame_blade",name:"Flame Blade",icon:"🔥",slot:"weapon",rarity:"epic",stats:{atk:10,crit:5},desc:"A blade wreathed in flame."},
+  {id:"dragon_fang",name:"Dragon Fang",icon:"🐲",slot:"weapon",rarity:"legendary",stats:{atk:18,crit:10,lifesteal:5},desc:"Carved from a dragon's fang."},
+  {id:"leather_armor",name:"Leather Armor",icon:"🦺",slot:"armor",rarity:"common",stats:{def:2,hp:10},desc:"Simple leather protection."},
+  {id:"steel_armor",name:"Steel Armor",icon:"🛡️",slot:"armor",rarity:"epic",stats:{def:8,hp:20},desc:"Forged from the finest steel."},
+  {id:"shadow_cloak",name:"Shadow Cloak",icon:"🥷",slot:"armor",rarity:"legendary",stats:{def:5,dodge:15,hp:30},desc:"Cloak woven from shadows."},
+  {id:"leather_boots",name:"Leather Boots",icon:"👟",slot:"boots",rarity:"common",stats:{spd:2},desc:"Simple leather boots."},
+  {id:"swift_boots",name:"Swift Boots",icon:"👢",slot:"boots",rarity:"rare",stats:{spd:4,dodge:5},desc:"Boots of swiftness."},
+  {id:"phantom_boots",name:"Phantom Boots",icon:"👟",slot:"boots",rarity:"epic",stats:{spd:5,dodge:10},desc:"Boots that phase through danger."},
+  {id:"power_ring",name:"Power Ring",icon:"💍",slot:"accessory",rarity:"rare",stats:{atk:3,crit:5},desc:"A ring humming with power."},
+  {id:"vamp_pendant",name:"Vampire Pendant",icon:"📿",slot:"accessory",rarity:"epic",stats:{lifesteal:8,def:3},desc:"Heals you with each strike."},
+  {id:"dragon_amulet",name:"Dragon Amulet",icon:"📿",slot:"accessory",rarity:"legendary",stats:{atk:10,def:5,crit:15,lifesteal:10},desc:"An ancient amulet pulsing with power."},
+];
+const CONSUMABLES = [
+  {id:"hp_potion",name:"Health Potion",icon:"🧪",qty:3,desc:"Restores 40 HP.",use:"heal40"},
+  {id:"xp_crystal",name:"XP Crystal",icon:"💎",qty:1,desc:"Grants 100 XP instantly.",use:"xp100"},
+];
+
+// === INVENTORY STATE ===
+let inventory = {
+  equipped: { weapon:null, armor:null, boots:null, accessory:null },
+  backpack: [],
+  items: [...CONSUMABLES.map(c=>({...c}))],
+  materials: [{id:"monster_essence",name:"Monster Essence",icon:"🔮",qty:0,desc:"Dropped by defeated enemies."}],
+};
+
+// === RPG STATE ===
+let rpg = {
+  level:1, xp:0, xpNext:100, wave:1, killsThisWave:0, enemiesPerWave:3, totalKills:0,
+  atk:0, def:0, spd:0, critChance:5, critMult:1.5, lifesteal:0, dodgeChance:0,
+  streakKills:0, streakTimer:0, bonusXpMult:1.0, achievements:[], totalXpEarned:0,
+  quests: {}, // islandIdx -> {active, completed, progress}
+};
+
+// === CHARACTERS ===
+const CHARS=[
+  {id:'hero',name:'The Strongest Hero',icon:'💪',color:0xfbbf24,tag:'Hands',exc:false,hp:100,spd:5,jmp:17,atk:5,def:3,
+   passive:'Normal Punch charges a strong lock-on punch.',
+   moves:[{n:'Normal Punch',d:'31 dmg',k:'1',cd:25,aoe:0,dmg:31},{n:'Consecutive Punches',d:'15 dmg x10',k:'2',cd:30,aoe:10,dmg:15},{n:'Shove',d:'Push enemy',k:'3',cd:8,aoe:0,dmg:5},{n:'Uppercut',d:'Launch+ragdoll',k:'4',cd:15,aoe:0,dmg:10,launch:true}]},
+  {id:'hunter',name:'Hero Hunter',icon:'🦾',color:0xef4444,tag:'Grab',exc:false,hp:95,spd:5.5,jmp:15,atk:6,def:2,
+   passive:'Bloodlust: Restores HP after finishing enemies.',
+   moves:[{n:'Flowing Water',d:'24.5 dmg',k:'1',cd:28,aoe:5,dmg:24.5},{n:'Lethal Stream',d:'18.5 dmg',k:'2',cd:35,aoe:15,dmg:18.5},{n:'Hunter Grasp',d:'10 dmg',k:'3',cd:12,aoe:0,dmg:10},{n:'Prey Peril',d:'9 hits',k:'4',cd:20,aoe:0,dmg:9}]},
+  {id:'cyborg',name:'Destructive Cyborg',icon:'🤖',color:0x22d3ee,tag:'Heavy',exc:false,hp:120,spd:4,jmp:14,atk:7,def:6,
+   passive:'Heavy brawler with high HP and defense.',
+   moves:[{n:'Machine Gun Blows',d:'Ragdoll up',k:'1',cd:22,aoe:10,dmg:16,launch:true},{n:'Ignition Burst',d:'Front blast',k:'2',cd:18,aoe:25,dmg:14},{n:'Blitz Shot',d:'AoE projectile',k:'3',cd:20,aoe:20,dmg:18},{n:'Jet Dive',d:'Air dive',k:'4',cd:16,aoe:30,dmg:15,launch:true}]},
+  {id:'ninja',name:'Deadly Ninja',icon:'🥷',color:0x8b5cf6,tag:'Katana',exc:false,hp:85,spd:7,jmp:18,atk:8,def:1,
+   passive:'Fast assassin with teleport abilities.',
+   moves:[{n:'Flash Strike',d:'4 strikes',k:'1',cd:15,aoe:5,dmg:12},{n:'Whirlwind Kick',d:'Teleport+ragdoll',k:'2',cd:20,aoe:10,dmg:14,launch:true},{n:'Scatter',d:'TP behind+slash',k:'3',cd:14,aoe:0,dmg:10},{n:'Explosive Bomb',d:'AoE bomb',k:'4',cd:18,aoe:35,dmg:16}]},
+  {id:'demon',name:'Brutal Demon',icon:'👹',color:0xf97316,tag:'Bat',exc:false,hp:110,spd:4.5,jmp:15,atk:7,def:5,
+   passive:'Metal bat user with unblockable attacks.',
+   moves:[{n:'Homerun',d:'Unblockable',k:'1',cd:18,aoe:0,dmg:17,launch:true},{n:'Beatdown',d:'6-hit slam',k:'2',cd:23,aoe:5,dmg:16},{n:'Grand Slam',d:'Aerial AoE',k:'3',cd:20,aoe:25,dmg:17,launch:true},{n:'Foul Ball',d:'AoE debris',k:'4',cd:23,aoe:30,dmg:15}]},
+  {id:'blade',name:'Blade Master',icon:'⚔️',color:0x60a5fa,tag:'Sword',exc:false,hp:90,spd:6,jmp:16,atk:6,def:4,
+   passive:'Master swordsman with parry ability.',
+   moves:[{n:'Quick Slice',d:'3 strikes',k:'1',cd:10,aoe:5,dmg:12},{n:'Perfect Parry',d:'Block+counter',k:'2',cd:12,aoe:0,dmg:8},{n:'Whirlwind Edge',d:'Spin AoE',k:'3',cd:16,aoe:40,dmg:14},{n:'Blade Storm',d:'Rapid spins',k:'4',cd:25,aoe:20,dmg:20}]},
+  {id:'psychic',name:'Wild Psychic',icon:'🌀',color:0x10b981,tag:'Psychic',exc:false,hp:95,spd:6.5,jmp:16,atk:7,def:3,
+   passive:'Fastest M1s. Psychic powers with AoE.',
+   moves:[{n:'Psychic Swipes',d:'14% dmg',k:'1',cd:5,aoe:5,dmg:14},{n:'Crushing Pull',d:'Pull+slam',k:'2',cd:22,aoe:20,dmg:13,launch:true},{n:'Windstorm Fury',d:'Tornado',k:'3',cd:20,aoe:35,dmg:8},{n:'Expulsive Push',d:'AoE blast',k:'4',cd:19,aoe:30,dmg:12.5,launch:true}]},
+  {id:'martial',name:'Martial Artist',icon:'🥋',color:0xeab308,tag:'Fist',exc:false,hp:90,spd:6,jmp:17,atk:6,def:4,
+   passive:'Versatile kick techniques.',
+   moves:[{n:'Bullet Barrage',d:'15.1% dmg',k:'1',cd:20,aoe:15,dmg:15.1,launch:true},{n:'Vanishing Kick',d:'Dash kick',k:'2',cd:20,aoe:5,dmg:12},{n:'Whirlwind Drop',d:'Air unblockable',k:'3',cd:15,aoe:20,dmg:14,launch:true},{n:'Head First',d:'Grab+smash',k:'4',cd:18,aoe:25,dmg:16}]},
+  {id:'tech',name:'Tech Prodigy',icon:'🔧',color:0xa78bfa,tag:'Gadgets',exc:true,hp:100,spd:5.5,jmp:16,atk:6,def:4,
+   passive:'Ultimate: Transforms into Iron Giant.',
+   moves:[{n:'Weboom',d:'Spider mine',k:'1',cd:18,aoe:25,dmg:16.5},{n:'Plasma Cannon',d:'35.2% dmg',k:'2',cd:21,aoe:30,dmg:35.2},{n:'Trinity Tear',d:'Grab 3+slam',k:'3',cd:20,aoe:15,dmg:20,launch:true},{n:'Double Trouble',d:'Throw combo',k:'4',cd:20,aoe:8,dmg:17.5}]},
+  {id:'sorcerer',name:'Sorcerer',icon:'🔮',color:0x6366f1,tag:'Cursed',exc:true,hp:80,spd:7,jmp:18,atk:9,def:2,
+   passive:'Cursed energy. Infinity makes user invulnerable.',
+   moves:[{n:'Infinity',d:'Invulnerable shield',k:'1',cd:30,aoe:0,dmg:0},{n:'Repulse',d:'999999 dmg 1-shot',k:'2',cd:60,aoe:50,dmg:999999},{n:'Erase Finisher',d:'Ultimate beam',k:'3',cd:45,aoe:60,dmg:50,launch:true},{n:'Cursed Strike',d:'Quick energy',k:'4',cd:10,aoe:5,dmg:12}]},
+];
+
+// === AUDIO ===
+let actx;
+function initAudio(){ if(!actx){try{actx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}} }
+function snd(f,d,t='sine',v=0.2){ if(!actx||settings.masterVol<=0||settings.sfxVol<=0)return; try{const o=actx.createOscillator(),g=actx.createGain();o.type=t;o.frequency.value=f;g.gain.value=v*settings.masterVol*settings.sfxVol;g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+d)}catch(e){} }
+const SFX={punch:()=>snd(180,.08,'square',.25),hit:()=>snd(120,.12,'sawtooth',.35),block:()=>snd(300,.06,'sine',.2),jump:()=>snd(400,.1,'sine',.2),dash:()=>snd(250,.08,'triangle',.2),special:()=>{snd(600,.15,'sawtooth',.3);snd(300,.2,'square',.2)},ko:()=>{snd(100,.5,'sawtooth',.4);snd(60,.8,'sine',.3)},select:()=>snd(500,.05,'sine',.15),uppercut:()=>snd(500,.15,'square',.3),slam:()=>snd(80,.2,'sawtooth',.4),aoe:()=>{snd(150,.2,'sawtooth',.35);snd(300,.15,'square',.2)},levelup:()=>{snd(523,.1,'sine',.3);setTimeout(()=>snd(659,.1,'sine',.3),80);setTimeout(()=>snd(784,.2,'sine',.3),160)},pickup:()=>{snd(800,.08,'sine',.2);setTimeout(()=>snd(1000,.08,'sine',.2),80)},quest:()=>{snd(400,.1,'sine',.25);setTimeout(()=>snd(600,.15,'sine',.25),100)}};
+
+// === 3D CHARACTER BUILDER ===
+function buildChar(cd,isEnemy){
+  const g=new THREE.Group();
+  const c=cd.color;
+  const skin=new THREE.MeshStandardMaterial({color:c,roughness:.6,metalness:.2,emissive:0x000000,emissiveIntensity:0});
+  const dark=new THREE.MeshStandardMaterial({color:0x1a1a2a,roughness:.8,metalness:.1});
+  const accent=new THREE.MeshStandardMaterial({color:c,roughness:.3,metalness:.6,emissive:c,emissiveIntensity:.15});
+  // Head
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.35,16,16),skin); head.position.y=2.1; head.castShadow=true; g.add(head);
+  // Eyes
+  const eM=new THREE.MeshBasicMaterial({color:0xffffff}), eG=new THREE.SphereGeometry(.07,8,8);
+  const eyeL=new THREE.Mesh(eG,eM);eyeL.position.set(-.12,2.15,.28);g.add(eyeL);
+  const eyeR=new THREE.Mesh(eG,eM);eyeR.position.set(.12,2.15,.28);g.add(eyeR);
+  const pM=new THREE.MeshBasicMaterial({color:0x000}), pG=new THREE.SphereGeometry(.035,6,6);
+  const pupL=new THREE.Mesh(pG,pM);pupL.position.set(-.12,2.15,.33);g.add(pupL);
+  const pupR=new THREE.Mesh(pG,pM);pupR.position.set(.12,2.15,.33);g.add(pupR);
+  // Torso
+  const torsoMat=skin.clone();const torso=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,1.4,12),torsoMat); torso.position.y=1.35; torso.castShadow=true; g.add(torso);
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(.5,.35,.3),accent); chest.position.set(0,1.55,.15); g.add(chest);
+  // Arms
+  const aG=new THREE.CylinderGeometry(.13,.13,1.1,8), hG=new THREE.SphereGeometry(.15,10,10);
+  const aLP=new THREE.Group(); aLP.position.set(-.42,1.7,0);
+  const aL=new THREE.Mesh(aG,skin); aL.position.set(-.1,-.35,0); aL.castShadow=true; aLP.add(aL);
+  const hL=new THREE.Mesh(hG,skin); hL.position.set(-.1,-.75,0); aLP.add(hL); g.add(aLP);
+  const aRP=new THREE.Group(); aRP.position.set(.42,1.7,0);
+  const aR=new THREE.Mesh(aG,skin); aR.position.set(.1,-.35,0); aR.castShadow=true; aRP.add(aR);
+  const hR=new THREE.Mesh(hG,skin); hR.position.set(.1,-.75,0); aRP.add(hR); g.add(aRP);
+  // Legs
+  const lG=new THREE.CylinderGeometry(.15,.15,1.15,8);
+  const lLP=new THREE.Group(); lLP.position.set(-.2,1,0);
+  const lL=new THREE.Mesh(lG,dark); lL.position.set(0,-.5,0); lL.castShadow=true; lLP.add(lL); g.add(lLP);
+  const lRP=new THREE.Group(); lRP.position.set(.2,1,0);
+  const lR=new THREE.Mesh(lG,dark); lR.position.set(0,-.5,0); lR.castShadow=true; lRP.add(lR); g.add(lRP);
+  // Feet
+  const fG=new THREE.BoxGeometry(.18,.1,.3);
+  const footL=new THREE.Mesh(fG,dark);footL.position.set(-.2,.05,.05);footL.castShadow=true;g.add(footL);
+  const footR=new THREE.Mesh(fG,dark);footR.position.set(.2,.05,.05);footR.castShadow=true;g.add(footR);
+  // Weapon
+  if(cd.id==='ninja'){const b=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,1.2,8),new THREE.MeshStandardMaterial({color:0xcccccc,metalness:.8,roughness:.2}));b.position.set(.6,1.3,.3);b.rotation.x=Math.PI/2;g.add(b);}
+  else if(cd.id==='demon'){const bat=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.5,8),new THREE.MeshStandardMaterial({color:0x888888,metalness:.7,roughness:.3}));bat.position.set(.6,1.3,.2);g.add(bat);}
+  else if(cd.id==='blade'){const sw=new THREE.Mesh(new THREE.BoxGeometry(.04,1,.08),new THREE.MeshStandardMaterial({color:0xc0c0e0,metalness:.9,roughness:.1}));sw.position.set(.55,1.5,.25);g.add(sw);}
+  else if(cd.id==='sorcerer'){const aura=new THREE.Mesh(new THREE.SphereGeometry(.2,12,12),new THREE.MeshStandardMaterial({color:0x6366f1,emissive:0x6366f1,emissiveIntensity:.5,transparent:true,opacity:.6}));aura.position.set(0,1.4,-.3);g.add(aura);g.userData.aura=aura;}
+  else if(cd.id==='cyborg'){const p=new THREE.Mesh(new THREE.BoxGeometry(.45,.2,.35),new THREE.MeshStandardMaterial({color:0x444466,metalness:.8,roughness:.3}));p.position.set(0,1.8,.15);g.add(p);}
+  // HP bar
+  const hpBg=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.12),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.6}));hpBg.position.y=2.7;g.add(hpBg);
+  const hpFl=new THREE.Mesh(new THREE.PlaneGeometry(1.16,.08),new THREE.MeshBasicMaterial({color:0x22c55e}));hpFl.position.set(0,2.7,.01);g.add(hpFl);
+  // Name
+  const cv=document.createElement('canvas');cv.width=256;cv.height=64;const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.font='bold 24px Arial';cx.textAlign='center';cx.fillText(cd.name,128,36);
+  const tex=new THREE.CanvasTexture(cv);const ns=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false}));ns.position.y=3;ns.scale.set(1.5,.4,1);g.add(ns);
+  g.userData={charData:cd,isEnemy,armLPivot:aLP,armRPivot:aRP,legLPivot:lLP,legRPivot:lRP,head,torso,hpBarFill:hpFl,nameSprite:ns,aura:g.userData.aura,
+    hp:cd.hp,maxHp:cd.hp,vx:0,vy:0,vz:0,onGround:true,facing:isEnemy?-1:1,state:'idle',stateTimer:0,
+    hitStun:0,m1Count:0,m1Timer:0,m1Cd:0,attacking:false,attackFrame:0,currentMove:null,
+    moveCds:{},super:0,maxSuper:100,combo:0,comboTimer:0,ragdoll:0,ragdollVx:0,ragdollVz:0,
+    invuln:0,dashing:0,dashVx:0,dashVz:0,blocking:false,hitFlash:0,landSquat:0,
+    walkPhase:0,animTime:0,aiTimer:Math.floor(Math.random()*60)+30,alive:true,scale:1};
+  cd.moves.forEach((m,i)=>{g.userData.moveCds[i]=0});
+  return g;
+}
+
+// === WORLD BUILDER ===
+function buildWorld(){
+  // Sky
+  const skyGeo=new THREE.SphereGeometry(200,16,16);
+  const skyMat=new THREE.ShaderMaterial({vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'varying vec3 vP;void main(){float h=normalize(vP).y;vec3 c=mix(vec3(.04,.04,.1),vec3(.15,.1,.2),max(h,0.));c=mix(c,vec3(.3,.2,.15),max(h*.5+.2,0.)*.3);gl_FragColor=vec4(c,1.);}',side:THREE.BackSide});
+  scene.add(new THREE.Mesh(skyGeo,skyMat));
+  scene.fog=new THREE.Fog(0x0a0a14,50,150);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x505070,0.7));
+  const dl=new THREE.DirectionalLight(0xffeecc,1.0);dl.position.set(20,30,15);dl.castShadow=settings.shadows===1;
+  dl.shadow.mapSize.width=settings.quality>=3?2048:1024;dl.shadow.mapSize.height=settings.quality>=3?2048:1024;
+  dl.shadow.camera.left=-50;dl.shadow.camera.right=50;dl.shadow.camera.top=50;dl.shadow.camera.bottom=-50;dl.shadow.camera.near=1;dl.shadow.camera.far=100;
+  scene.add(dl);
+  const fillLight=new THREE.DirectionalLight(0x6060ff,0.3);fillLight.position.set(-10,10,0);scene.add(fillLight);
+
+  // Islands
+  ISLANDS.forEach((isl,i)=>{
+    // Island platform
+    const r=ISLAND_R+5;
+    const islMesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r-3,3,32),new THREE.MeshStandardMaterial({color:isl.color,roughness:.8,metalness:.1}));
+    islMesh.position.set(isl.cx,0,isl.cz);islMesh.receiveShadow=true;islMesh.castShadow=true;scene.add(islMesh);
+    // Grass top
+    const grass=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.2,32),new THREE.MeshStandardMaterial({color:isl.color+0x101810,roughness:.9}));
+    grass.position.set(isl.cx,1.6,isl.cz);grass.receiveShadow=true;scene.add(grass);
+    // Trees/decorations
+    if(settings.quality>=2){
+      for(let j=0;j<6;j++){
+        const a=j/6*Math.PI*2+Math.random()*.5,rad=r-4-Math.random()*6;
+        const tx=isl.cx+Math.cos(a)*rad, tz=isl.cz+Math.sin(a)*rad;
+        const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.3,.4,3,6),new THREE.MeshStandardMaterial({color:0x4a3a20,roughness:.9}));
+        trunk.position.set(tx,3.2,tz);trunk.castShadow=true;scene.add(trunk);
+        const leaves=new THREE.Mesh(new THREE.SphereGeometry(2+Math.random(),8,8),new THREE.MeshStandardMaterial({color:0x2a4a2a+Math.floor(Math.random()*0x0a0a00),roughness:.8}));
+        leaves.position.set(tx,5.5,tz);leaves.castShadow=true;scene.add(leaves);
+      }
+    }
+    // NPC marker (glowing pillar)
+    const npcPos=getNPCPos(i);
+    const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,8,8),new THREE.MeshStandardMaterial({color:0xf0a020,emissive:0xf0a020,emissiveIntensity:.5,transparent:true,opacity:.4}));
+    pillar.position.set(npcPos.x,6,npcPos.z);scene.add(pillar);
+    // NPC character
+    const npcChar=buildChar({...CHARS[0],color:0xf0a020,name:isl.npc.name,icon:isl.npc.icon},true);
+    npcChar.position.set(npcPos.x,0,npcPos.z);npcChar.userData.isNPC=true;npcChar.userData.islandIdx=i;
+    scene.add(npcChar);npcs.push(npcChar);
+    // Rocks
+    for(let j=0;j<4;j++){
+      const ra=Math.random()*Math.PI*2,rr=5+Math.random()*(r-8);
+      const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.6+Math.random()*.8,0),new THREE.MeshStandardMaterial({color:0x555566,roughness:.9}));
+      rock.position.set(isl.cx+Math.cos(ra)*rr,1.7,isl.cz+Math.sin(ra)*rr);rock.castShadow=true;scene.add(rock);
+    }
+  });
+
+  // Bridges between islands
+  const bridges=[[0,1],[0,2],[1,3],[2,3]];
+  bridges.forEach(([a,b])=>{
+    const ia=ISLANDS[a],ib=ISLANDS[b];
+    const dx=ib.cx-ia.cx,dz=ib.cz-ia.cz;const len=Math.sqrt(dx*dx+dz*dz);
+    const bridge=new THREE.Mesh(new THREE.BoxGeometry(4,.3,len-ISLAND_R*.6),new THREE.MeshStandardMaterial({color:0x6a5a40,roughness:.8}));
+    bridge.position.set((ia.cx+ib.cx)/2,1.5,(ia.cz+ib.cz)/2);
+    bridge.rotation.y=Math.atan2(dx,dz);bridge.receiveShadow=true;scene.add(bridge);
+    // Bridge railings
+    if(settings.quality>=2){
+      for(let r=-1;r<=1;r+=2){
+        const rail=new THREE.Mesh(new THREE.BoxGeometry(.15,.8,len-ISLAND_R*.6),new THREE.MeshStandardMaterial({color:0x4a3a20}));
+        rail.position.set((ia.cx+ib.cx)/2+r*2,2,(ia.cz+ib.cz)/2);
+        rail.rotation.y=Math.atan2(dx,dz);scene.add(rail);
+      }
+    }
+  });
+
+  // Water plane below
+  const water=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshStandardMaterial({color:0x0a2030,roughness:.2,metalness:.3,transparent:true,opacity:.7}));
+  water.rotation.x=-Math.PI/2;water.position.y=-8;scene.add(water);
+}
+
+function getNPCPos(islandIdx){ const isl=ISLANDS[islandIdx]; return {x:isl.cx+ISLAND_R-8, z:isl.cz+ISLAND_R-8}; }
+
+// === SCENE INIT ===
+function initThree(){
+  canvas=document.getElementById('gc');
+  renderer=new THREE.WebGLRenderer({canvas,antialias:settings.quality>=2});
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,settings.quality>=3?2:1));
+  renderer.shadowMap.enabled=settings.shadows===1;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x0a0a14);
+  scene=new THREE.Scene();
+  cam=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,250);
+  cam.position.set(0,8,14);cam.lookAt(0,1,0);
+  clock=new THREE.Clock();
+  buildWorld();
+  addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+}
+
+// === COMBAT ===
+function getStats(){ // apply equipment + rpg bonuses
+  let s={atk:rpg.atk,def:rpg.def,spd:rpg.spd,crit:rpg.critChance,lifesteal:rpg.lifesteal,dodge:rpg.dodgeChance,hp:0};
+  for(let slot in inventory.equipped){const e=inventory.equipped[slot];if(e&&e.stats){for(let k in e.stats){s[k]=(s[k]||0)+e.stats[k]}}}
+  return s;
+}
+
+function doM1(fd,opp){
+  const u=fd.userData;
+  if(u.hitStun>0||u.ragdoll>0||u.attacking||u.m1Cd>0||!u.alive) return;
+  if(u.m1Timer>0&&u.m1Count>=M1_MAX) return;
+  u.m1Count++; if(u.m1Count>M1_MAX)u.m1Count=1;
+  u.m1Timer=30;u.m1Cd=M1_CD;u.attacking=true;u.attackFrame=0;
+  const stats=fd===player3D?getStats():{atk:0};
+  u.currentMove={isM1:true,name:'Punch '+u.m1Count,dmg:5+u.m1Count+(fd===player3D?stats.atk:0),m1Hit:u.m1Count};
+  u.state='attacking';SFX.punch();
+}
+
+function startMove(fd,idx,opp){
+  const u=fd.userData;
+  if(u.hitStun>0||u.ragdoll>0||u.attacking||u.m1Cd>0||!u.alive) return false;
+  if(u.moveCds[idx]>0) return false;
+  const m=u.charData.moves[idx];
+  const stats=fd===player3D?getStats():{atk:0};
+  u.currentMove={...m,idx,isM1:false,dmg:m.dmg+(fd===player3D?stats.atk:0)};
+  u.attacking=true;u.attackFrame=0;u.state='attacking';u.moveCds[idx]=m.cd*60;
+  if(m.aoe>0)SFX.aoe();else if(m.launch)SFX.uppercut();else SFX.special();
+  return true;
+}
+
+function resolveM1(fd,opp){
+  if(!opp)return; const u=fd.userData,ou=opp.userData;
+  if(fd.position.distanceTo(opp.position)>3)return;
+  if(ou.ragdoll>0)return;
+  const is4=u.m1Count===4;let dmg=u.currentMove.dmg;let opts={};
+  if(is4){
+    if(!u.onGround&&u.vy<0){opts.launch=true;dmg+=3;SFX.uppercut();}
+    else if(!u.onGround&&u.vy>0){opts.slam=true;dmg+=2;SFX.slam();}
+    else{opts.ragdoll=true;opts.knockback=.3;SFX.hit();}
+    if(opts.ragdoll&&nearWall(opp)){opts.wallCombo=true;dmg+=8;}
+  }
+  dealDmg(opp,fd,dmg,opts);
+}
+
+function resolveMove(fd,opp){
+  const u=fd.userData,m=u.currentMove;if(!m||!opp)return;
+  const dist=fd.position.distanceTo(opp.position);
+  const range=m.aoe>0?3+m.aoe/10:3;
+  if(dist>range)return;
+  if(opp.userData.ragdoll>0&&!m.aoe)return;
+  let dmg=m.dmg===999999?999999:Math.round((m.dmg/100)*opp.userData.maxHp);
+  if(dmg<1)dmg=1;
+  const opts={aoe:m.aoe>0,launch:!!m.launch,unblockable:m.n.includes('Homerun')||m.n.includes('Repulse')||m.n.includes('Whirlwind')||m.n.includes('Erase'),
+    ragdoll:m.n.includes('Slam')||m.n.includes('Beatdown')||m.n.includes('Grasp')||m.n.includes('Pincer'),knockback:.4};
+  if(m.n==='Repulse'){dmg=999999;opts.unblockable=true;opts.ragdoll=true;opts.knockback=1.5;}
+  dealDmg(opp,fd,dmg,opts);
+  if(m.aoe>0)spawn3DP(fd.position,m.aoe);
+  if(opts.launch)spawn3DP(opp.position,10,0xfbbf24);else spawn3DP(opp.position,8);
+}
+
+function nearWall(fd){return Math.abs(fd.position.x-ISLANDS[curIsland].cx)>ISLAND_R-3||Math.abs(fd.position.z-ISLANDS[curIsland].cz)>ISLAND_R-3;}
+
+function dealDmg(tgt,atk,dmg,opts={}){
+  const tu=tgt.userData;
+  if(tu.invuln>0)return;
+  if(tu.charData.id==='sorcerer'&&tu.currentMove&&tu.currentMove.n==='Infinity')return;
+  // Dodge
+  if(tgt===player3D){
+    const stats=getStats();
+    if(Math.random()*100<stats.dodge){floatText(player3D.position,"DODGE","miss");return;}
+  }
+  let actual=dmg,blocked=false,crit=false;
+  // Apply owner damage multiplier to enemy attacks on player
+  if(tgt===player3D&&atk!==player3D){actual=Math.floor(dmg*(ownerConfig.dmgMult||1));}
+  // Crit
+  if(atk===player3D){
+    const stats=getStats();
+    if(Math.random()*100<stats.crit){actual=Math.floor(dmg*1.5);crit=true;}
+    // Lifesteal
+    if(stats.lifesteal>0){player3D.userData.hp=Math.min(player3D.userData.maxHp,player3D.userData.hp+Math.floor(actual*stats.lifesteal/100));}
+  }
+  if(tu.blocking&&!opts.unblockable){
+    actual=Math.max(1,Math.floor(dmg*.15));blocked=true;tu.hitStun=12;SFX.block();
+  }else{
+    // RPG def reduction
+    if(tgt===player3D){const s=getStats();actual=Math.max(1,dmg-Math.floor(s.def*.5));}
+    tu.hitStun=20+(opts.launch?30:0);tu.combo++;tu.comboTimer=90;tu.hitFlash=8;SFX.hit();tu.state='hit';
+    // Reset streak when player takes damage
+    if(tgt===player3D){rpg.streakKills=0;rpg.streakTimer=0;}
+  }
+  tu.hp=Math.max(0,tu.hp-actual);
+  tu.super=Math.min(tu.maxSuper,tu.super+actual*.5);
+  if(atk)atk.userData.super=Math.min(atk.userData.maxSuper,atk.userData.super+actual*.3);
+  floatText(tgt.position,crit?("CRIT "+actual):("-"+actual),crit?"crit":"dmg");
+  if(tu.hp<=0){
+    tu.alive=false;tu.state='ko';tu.ragdoll=99999;SFX.ko();
+    if(gameMode==='world'&&atk===player3D)onKill(tgt);
+    if(atk&&atk.userData.charData.id==='hunter')atk.userData.hp=Math.min(atk.userData.maxHp,atk.userData.hp+25);
+    return;
+  }
+  if(opts.launch){tu.vy=.4;tu.onGround=false;tu.ragdoll=90;tu.ragdollVx=(atk?atk.userData.facing:1)*.3;tgt.rotation.z=.2;}
+  if(opts.slam){tu.vy=-.5;tu.ragdoll=90;tu.state='slammed';}
+  if(opts.ragdoll){tu.ragdoll=90;tu.ragdollVx=(atk?atk.userData.facing:1)*(opts.knockback||.3);tgt.rotation.z=.3;}
+  if(opts.wallCombo){tu.ragdollVx=(atk?atk.userData.facing:1)*.6;SFX.slam();}
+  showCombo(tu.combo,crit?"CRITICAL":"HIT");
+}
+
+// === RPG LEVELING ===
+function onKill(enemy){
+  rpg.totalKills++;
+  rpg.streakKills++;
+  rpg.streakTimer=300;
+  // Streak bonuses
+  let xpMult=1.0;
+  if(rpg.streakKills>=3){xpMult=1.5;announce("KILL STREAK x"+rpg.streakKills+"!","1.5x XP","streak");}
+  if(rpg.streakKills>=5){xpMult=2.0;announce("RAMPAGE!","2x XP","rampage");}
+  if(rpg.streakKills>=8){xpMult=3.0;announce("GODLIKE!","3x XP","godlike");}
+  // XP
+  const baseXp=50+(ISLANDS[curIsland].enemyLevel*15);
+  const comboBonus=rpg.streakKills>=3?rpg.streakKills*10:0;
+  const xp=Math.floor((baseXp+comboBonus)*xpMult);
+  gainXP(xp);
+  // Loot drop
+  if(Math.random()<(ownerConfig.lootRate+ISLANDS[curIsland].enemyLevel*0.05)){dropLoot(enemy.position);}
+  // Material
+  inventory.materials[0].qty++;
+  // Quest progress
+  updateQuestProgress();
+  // Achievements
+  checkAchievements();
+}
+
+function gainXP(amount){
+  amount=Math.floor(amount*(ownerConfig.xpMult||1));
+  rpg.xp+=amount;rpg.totalXpEarned+=amount;
+  floatText(player3D.position,"+"+amount+" XP","xp");
+  while(rpg.xp>=rpg.xpNext&&rpg.level<30){
+    rpg.xp-=rpg.xpNext;rpg.level++;
+    rpg.xpNext=Math.floor(100*Math.pow(1.35,rpg.level-1));
+    // Level up rewards
+    let rewards=[];
+    if(rpg.level%3===0){rpg.atk+=3;rewards.push("ATK +3");}
+    if(rpg.level%4===0){rpg.def+=2;rewards.push("DEF +2");}
+    if(rpg.level%2===0){rpg.spd+=1;rewards.push("SPD +1");}
+    rpg.critChance+=2;rewards.push("CRIT +2%");
+    if(rpg.level>=4&&rpg.level%4===0){rpg.lifesteal+=3;rewards.push("LIFESTEAL +3%");}
+    if(rpg.level>=5&&rpg.level%5===0){rpg.dodgeChance+=3;rewards.push("DODGE +3%");}
+    if(player3D){player3D.userData.maxHp+=15;player3D.userData.hp=player3D.userData.maxHp;}
+    SFX.levelup();showLevelUp(rewards);
+    if(rpg.level===10)checkAchievements();
+  }
+  updateRpgHud();
+}
+
+function showLevelUp(rewards){
+  const el=document.getElementById('lvUp');
+  document.getElementById('lvL').textContent="Level "+rpg.level;
+  document.getElementById('lvS').textContent=rewards.join(" | ");
+  el.style.display='block';
+  setTimeout(()=>el.style.display='none',2500);
+}
+
+function checkAchievements(){
+  const ach=[
+    {id:'first_blood',name:'First Blood',cond:rpg.totalKills>=1},
+    {id:'combo_king',name:'Combo King',cond:false}, // checked in showCombo
+    {id:'unstoppable',name:'Unstoppable',cond:rpg.streakKills>=5},
+    {id:'survivor',name:'Survivor',cond:rpg.wave>=5||curIsland>=2},
+    {id:'demon_slayer',name:'Demon Slayer',cond:rpg.totalKills>=50},
+    {id:'max_power',name:'Max Power',cond:rpg.level>=10},
+  ];
+  ach.forEach(a=>{
+    if(a.cond&&!rpg.achievements.includes(a.id)){rpg.achievements.push(a.id);announce("🏆 "+a.name,"Achievement Unlocked!","");}
+  });
+}
+
+// === LOOT ===
+function dropLoot(pos){
+  const islandLvl=ISLANDS[curIsland].enemyLevel;
+  const pool=LOOT_TABLE.filter(l=>{
+    if(l.rarity==='common')return true;
+    if(l.rarity==='rare')return islandLvl>=1;
+    if(l.rarity==='epic')return islandLvl>=3;
+    if(l.rarity==='legendary')return islandLvl>=5;
+    return false;
+  });
+  const item=pool[Math.floor(Math.random()*pool.length)];
+  const copy={...item,stats:{...item.stats}};
+  // Create pickup
+  const pickup=new THREE.Mesh(new THREE.OctahedronGeometry(.5,0),new THREE.MeshStandardMaterial({color:item.rarity==='legendary'?0xffaa00:item.rarity==='epic'?0xaa44ff:item.rarity==='rare'?0x4488ff:0x666666,emissive:item.rarity==='legendary'?0xffaa00:item.rarity==='epic'?0xaa44ff:0x4488ff,emissiveIntensity:.3,transparent:true,opacity:.8}));
+  pickup.position.set(pos.x,1.5,pos.z);pickup.userData={item:copy,rot:0};
+  scene.add(pickup);pickups.push(pickup);
+  floatText(pos,item.icon+" "+item.name,"heal");
+}
+
+function collectPickup(p){
+  const item=p.userData.item;
+  inventory.backpack.push({...item});
+  SFX.pickup();
+  floatText(player3D.position,"+ "+item.name,"heal");
+  updateInventory();
+}
+
+// === QUEST SYSTEM ===
+function initQuests(){
+  ISLANDS.forEach((isl,i)=>{
+    rpg.quests[i]={active:false,completed:false,progress:0};
+  });
+}
+
+function talkToNPC(npcIdx){
+  const isl=ISLANDS[npcIdx];
+  const qs=rpg.quests[npcIdx];
+  const dlg=document.getElementById('npcDialog');
+  document.getElementById('npcN').textContent=isl.npc.icon+" "+isl.npc.name;
+  if(qs.completed){
+    document.getElementById('npcT').textContent="Excellent work! You've completed my challenge. Head to the next island for greater challenges!";
+    document.getElementById('npcB').innerHTML='<button class="npcbtn" onclick="document.getElementById(\'npcDialog\').style.display=\'none\'">Close</button>';
+  }else if(qs.active){
+    document.getElementById('npcT').textContent=`Progress: ${qs.progress}/${isl.npc.quest.target} enemies defeated.`;
+    document.getElementById('npcB').innerHTML='<button class="npcbtn" onclick="document.getElementById(\'npcDialog\').style.display=\'none\'">Keep Fighting</button>';
+  }else{
+    document.getElementById('npcT').textContent=isl.npc.dialog;
+    document.getElementById('npcB').innerHTML=`<button class="npcbtn accept" onclick="window._acceptQuest(${npcIdx})">Accept Quest</button><button class="npcbtn" onclick="document.getElementById(\'npcDialog\').style.display=\'none\'">Maybe Later</button>`;
+  }
+  dlg.style.display='block';
+}
+
+window._acceptQuest=function(idx){
+  rpg.quests[idx].active=true;SFX.quest();
+  document.getElementById('npcDialog').style.display='none';
+    document.getElementById('adminPanel').style.display='none';
+    document.getElementById('ownerPanel').style.display='none';
+    document.getElementById('chatPanel').classList.remove('open');
+  announce("QUEST STARTED",ISLANDS[idx].npc.quest.target+" enemies to defeat","");
+  updateQuestTracker();
+};
+
+function updateQuestProgress(){
+  const qs=rpg.quests[curIsland];
+  if(!qs||!qs.active||qs.completed)return;
+  qs.progress++;
+  if(qs.progress>=ISLANDS[curIsland].npc.quest.target){
+    qs.completed=true;qs.active=false;
+    const reward=ISLANDS[curIsland].npc.quest.reward;
+    gainXP(reward.xp);
+    inventory.backpack.push({...reward.item});
+    SFX.quest();
+    announce("QUEST COMPLETE!",reward.item.icon+" "+reward.item.name+" +"+reward.xp+" XP","");
+    updateInventory();
+    // Spawn boss on quest completion
+    setTimeout(()=>spawnBoss(curIsland),1000);
+  }
+  updateQuestTracker();
+}
+
+function updateQuestTracker(){
+  const qs=rpg.quests[curIsland];
+  const qt=document.getElementById('fqt'),qd=document.getElementById('fqd'),qp=document.getElementById('fqp');
+  if(qs&&qs.active&&!qs.completed){
+    qt.textContent="⚔ "+ISLANDS[curIsland].npc.name+"'s Challenge";
+    qd.textContent="Defeat "+ISLANDS[curIsland].npc.quest.target+" enemies";
+    qp.textContent="Progress: "+qs.progress+"/"+ISLANDS[curIsland].npc.quest.target;
+  }else if(qs&&qs.completed){
+    qt.textContent="✓ Quest Complete";
+    qd.textContent="Talk to NPC or explore next island";
+    qp.textContent="";
+  }else{
+    qt.textContent="Talk to NPC for quests";
+    qd.textContent="Find the glowing pillars";
+    qp.textContent="";
+  }
+}
+
+// === FIGHTER UPDATE (with smooth animations) ===
+function updateFighter(fd,opp){
+  if(!fd||!fd.userData)return;
+  const u=fd.userData;
+  if(!u.alive&&u.ragdoll>=9000){updateHpBar(fd);return;}
+  for(let k in u.moveCds)if(u.moveCds[k]>0)u.moveCds[k]--;
+  if(u.m1Cd>0)u.m1Cd--;
+  if(u.m1Timer>0){u.m1Timer--;if(u.m1Timer<=0)u.m1Count=0;}
+  if(u.hitStun>0)u.hitStun--;
+  if(u.hitFlash>0)u.hitFlash--;
+  if(u.invuln>0)u.invuln--;
+  if(u.comboTimer>0){u.comboTimer--;if(u.comboTimer<=0)u.combo=0;}
+  if(u.landSquat>0)u.landSquat--;
+  if(u.dashing>0){u.dashing--;fd.position.x+=u.dashVx;fd.position.z+=u.dashVz;if(u.dashing<=0)u.state='idle';}
+  // Streak timer
+  if(fd===player3D&&rpg.streakTimer>0){rpg.streakTimer--;if(rpg.streakTimer<=0)rpg.streakKills=0;}
+
+  // Attack
+  if(u.attacking){
+    u.attackFrame++;
+    // Smooth arm swing
+    const swingPhase=u.attackFrame/(u.currentMove.isM1?18:40);
+    u.armRPivot.rotation.x=-Math.sin(swingPhase*Math.PI)*1.8;
+    // Body lean
+    fd.rotation.z=Math.sin(swingPhase*Math.PI)*0.1*u.facing;
+    // Special glow
+    if(!u.currentMove.isM1){
+      if(u.torso&&u.torso.material&&u.torso.material.emissive){u.torso.material.emissive.setHex(u.charData.color);u.torso.material.emissiveIntensity=0.4;}
+    }
+    if(u.currentMove.isM1&&u.attackFrame===6)resolveM1(fd,opp);
+    if(!u.currentMove.isM1&&u.attackFrame===12)resolveMove(fd,opp);
+    const endF=u.currentMove.isM1?18:40;
+    if(u.attackFrame>=endF){
+      u.attacking=false;u.currentMove=null;u.state='idle';
+      u.armRPivot.rotation.x=0;fd.rotation.z=0;
+      u.torso.material.emissiveIntensity=0.15;
+    }
+  }
+
+  // Ragdoll
+  if(u.ragdoll>0&&u.ragdoll<9000){
+    u.ragdoll--;
+    fd.position.x+=u.ragdollVx;fd.position.z+=u.ragdollVz;
+    u.ragdollVx*=.92;u.ragdollVz*=.92;
+    fd.rotation.z+=.08;fd.rotation.x+=.04;
+    if(!u.onGround){
+      fd.position.y+=u.vy;u.vy+=GRAV;
+      if(fd.position.y<=0){fd.position.y=0;u.vy=0;u.onGround=true;u.state='idle';u.ragdoll=0;fd.rotation.set(0,0,0);SFX.slam();}
+    }
+    if(u.ragdoll<=0){u.state='idle';u.combo=0;fd.rotation.set(0,u.facing>0?0:Math.PI,0);}
+    clampToIsland(fd);updateHpBar(fd);return;
+  }
+  if(u.ragdoll>=9000){updateHpBar(fd);return;} // KO state
+
+  // Gravity
+  if(!u.onGround){
+    fd.position.y+=u.vy;u.vy+=GRAV;
+    // Jump tilt
+    fd.rotation.x=Math.min(.3,-u.vy*.5);
+    if(fd.position.y<=0){
+      fd.position.y=0;u.vy=0;u.onGround=true;u.state='idle';
+      fd.rotation.x=0;u.landSquat=5;SFX.slam();
+    }
+  }
+  // Landing squat
+  if(u.landSquat>0){
+    u.legLPivot.rotation.x=.3;u.legRPivot.rotation.x=.3;
+    u.scale=0.85+0.15*(5-u.landSquat)/5;
+    fd.scale.setScalar(u.scale);
+  }else if(u.scale!==1){u.scale=1;fd.scale.set(1,1,1);}
+
+  clampToIsland(fd);
+
+  // Face opponent
+  if(opp&&u.state==='idle'){u.facing=opp.position.x>fd.position.x?1:-1;fd.rotation.y=u.facing>0?0:Math.PI;}
+
+  // Animations
+  if(u.state==='walking'){
+    u.walkPhase+=.2;
+    u.legLPivot.rotation.x=Math.sin(u.walkPhase)*.5;
+    u.legRPivot.rotation.x=-Math.sin(u.walkPhase)*.5;
+    u.armLPivot.rotation.x=-Math.sin(u.walkPhase)*.3;
+    u.armRPivot.rotation.x=Math.sin(u.walkPhase)*.3;
+    fd.position.y=Math.abs(Math.sin(u.walkPhase*2))*.08;
+  }else if(u.state==='idle'&&!u.attacking){
+    u.animTime+=.05;
+    u.legLPivot.rotation.x=0;u.legRPivot.rotation.x=0;
+    u.armLPivot.rotation.x=Math.sin(u.animTime)*.05;
+    u.armRPivot.rotation.x=Math.sin(u.animTime+Math.PI)*.05;
+    // Breathing
+    u.torso.scale.y=1+Math.sin(u.animTime*2)*.02;
+    u.torso.scale.x=1-Math.sin(u.animTime*2)*.01;
+    fd.position.y=Math.abs(Math.sin(u.animTime))*.03;
+  }
+
+  // Hit flash
+  if(u.hitFlash>0){
+    fd.rotation.z=(u.hitFlash/8)*-u.facing*.25;
+    if(u.torso&&u.torso.material&&u.torso.material.emissive){u.torso.material.emissive.setHex(0xff0000);u.torso.material.emissiveIntensity=.3;}
+  }else if(!u.attacking){
+    if(u.torso&&u.torso.material&&u.torso.material.emissive){u.torso.material.emissive.setHex(u.charData.color);u.torso.material.emissiveIntensity=.15;}
+  }
+
+  // Aura
+  if(u.aura){u.aura.rotation.y+=.03;u.aura.scale.setScalar(1+Math.sin(Date.now()*.003)*.15);}
+
+  updateHpBar(fd);
+  if(u.isEnemy&&!u.isNPC)updateAI(fd,opp);
+}
+
+function clampToIsland(fd){
+  const isl=ISLANDS[curIsland];const r=ISLAND_R;
+  const dx=fd.position.x-isl.cx,dz=fd.position.z-isl.cz;
+  const dist=Math.sqrt(dx*dx+dz*dz);
+  if(dist>r-1){fd.position.x=isl.cx+dx/dist*(r-1);fd.position.z=isl.cz+dz/dist*(r-1);}
+}
+
+function updateHpBar(fd){
+  if(!fd||!fd.userData||!fd.userData.hpBarFill)return;
+  const u=fd.userData;const pct=Math.max(0,u.hp/u.maxHp);
+  u.hpBarFill.scale.x=Math.max(.001,pct);
+  u.hpBarFill.position.x=-(1.16*(1-pct))/2;
+  u.hpBarFill.material.color.setHex(pct<=.1?0xdc2626:pct<=.25?0xf59e0b:0x22c55e);
+  u.hpBarFill.parent.lookAt(cam.position);
+}
+
+// === AI ===
+function updateAI(fd,opp){
+  const u=fd.userData;if(!u.alive||!opp)return;
+  u.aiTimer--;if(u.aiTimer>0)return;
+  u.aiTimer=15+Math.floor(Math.random()*25);
+  const dist=fd.position.distanceTo(opp.position);
+  if(dist>4){
+    const dx=opp.position.x-fd.position.x,dz=opp.position.z-fd.position.z;
+    const len=Math.sqrt(dx*dx+dz*dz)||1;const sp=(u.charData.spd/6)*.15;
+    fd.position.x+=(dx/len)*sp;fd.position.z+=(dz/len)*sp;
+    u.facing=dx>0?1:-1;fd.rotation.y=u.facing>0?0:Math.PI;
+    if(u.state==='idle')u.state='walking';
+  }else if(dist<2){fd.position.x+=Math.sign(fd.position.x-opp.position.x)*.05;if(u.state==='walking')u.state='idle';}
+  if(dist<3&&Math.random()<.35)doM1(fd,opp);
+  else if(dist<5&&Math.random()<.2){const av=u.charData.moves.map((m,i)=>i).filter(i=>u.moveCds[i]<=0);if(av.length)startMove(fd,av[Math.floor(Math.random()*av.length)],opp);}
+  else if(Math.random()<.08){const dx=opp.position.x-fd.position.x,dz=opp.position.z-fd.position.z;const len=Math.sqrt(dx*dx+dz*dz)||1;u.dashing=14;u.dashVx=(dx/len)*.5;u.dashVz=(dz/len)*.5;u.state='dashing';}
+  if(opp.userData.attacking&&dist<3.5&&Math.random()<.25){u.blocking=true;setTimeout(()=>{u.blocking=false},400);}
+}
+
+// === PARTICLES ===
+let particles=[];
+function spawn3DP(pos,count,color=0xff4444){
+  const c=settings.quality>=2?Math.min(count,12):Math.min(count,4);
+  for(let i=0;i<c;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(.08+Math.random()*.06,6,6),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.8}));
+    p.position.copy(pos);p.position.y+=1+Math.random()*.5;
+    p.userData={vx:(Math.random()-.5)*.3,vy:Math.random()*.2+.1,vz:(Math.random()-.5)*.3,life:30,maxLife:30};
+    scene.add(p);particles.push(p);
+  }
+}
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.userData.life--;
+    p.position.x+=p.userData.vx;p.position.y+=p.userData.vy;p.position.z+=p.userData.vz;
+    p.userData.vy-=.01;p.material.opacity=p.userData.life/p.userData.maxLife;p.scale.setScalar(p.userData.life/p.userData.maxLife);
+    if(p.userData.life<=0){scene.remove(p);particles.splice(i,1);}
+  }
+}
+
+// === PICKUP ROTATION ===
+function updatePickups(){
+  for(let i=pickups.length-1;i>=0;i--){
+    const p=pickups[i];p.userData.rot+=.05;p.rotation.y=p.userData.rot;p.position.y=1.5+Math.sin(p.userData.rot)*.2;
+    if(player3D&&p.position.distanceTo(player3D.position)<2){
+      collectPickup(p);scene.remove(p);pickups.splice(i,1);
+    }
+  }
+}
+
+// === CAMERA ===
+function updateCamera(){
+  if(!player3D)return;
+  // Behind player
+  const tx=player3D.position.x,ty=player3D.position.y+2,tz=player3D.position.z;
+  cam.position.x+=(tx-cam.position.x)*.05;
+  cam.position.z+=(tz+10-cam.position.z)*.05;
+  cam.position.y+=(8-cam.position.y)*.05;
+  cam.lookAt(tx,ty,tz);
+}
+
+// === INPUT ===
+const keys={};
+document.addEventListener('keydown',e=>{
+  // Prevent default for game keys to avoid browser scroll/interference
+  const gameKeys=['w','a','s','d','e','q','i','j','f','t','1','2','3','4','5','arrowup','arrowdown','arrowleft','arrowright'];
+  const lk=e.key.toLowerCase();
+  if(gameState==='fighting'&&(gameKeys.includes(lk)||e.code==='Space'||e.key===' ')){
+    e.preventDefault();
+  }
+  keys[lk]=true;
+  // Also store by e.code for more reliable detection
+  if(e.code==='Space')keys['space']=true;
+  if(gameState==='fighting'&&player3D){
+    if(e.code==='Space'||e.key===' '){jump3D();}
+    if(lk==='e')dash3D();
+    if(lk==='q'){if(keys['a'])sideDash3D(-1);else if(keys['d'])sideDash3D(1);}
+    if(['1','2','3','4','5'].includes(e.key))startMove(player3D,parseInt(e.key)-1,getNearestEnemy());
+    if(lk==='i'){toggleInventory();}
+    if(lk==='j'){toggleQuestLog();}
+    if(lk==='f'){tryInteract();}
+    if(lk==='t'){openFastTravel();}
+  }
+  if(e.key==='Escape'){
+    document.getElementById('inv').style.display='none';
+    document.getElementById('questLog').style.display='none';
+    document.getElementById('npcDialog').style.display='none';
+    document.getElementById('adminPanel').style.display='none';
+    document.getElementById('ownerPanel').style.display='none';
+    document.getElementById('chatPanel').classList.remove('open');
+    if(gameState==='fighting')returnToMenu();
+  }
+});
+document.addEventListener('keyup',e=>{
+  keys[e.key.toLowerCase()]=false;
+  if(e.code==='Space')keys['space']=false;
+  // Don't clear keys if focus is in chat input
+  if(document.activeElement&&document.activeElement.id==='chatTxt'){
+    // Only clear, don't set
+  }
+});
+// Clear keys when window loses focus (prevents stuck keys)
+window.addEventListener('blur',()=>{ for(let k in keys)keys[k]=false; });
+document.addEventListener('mousedown',e=>{
+  if(e.target.tagName==='BUTTON'||e.target.tagName==='SELECT'||e.target.tagName==='INPUT'||e.target.id==='invPanel'||e.target.closest('#invPanel')||e.target.closest('#questPanel')||e.target.closest('#npcDialog')||e.target.closest('#set2'))return;
+  initAudio();
+  if(gameState==='fighting'&&player3D)doM1(player3D,getNearestEnemy());
+});
+
+function jump3D(){const u=player3D.userData;if(u.onGround&&u.ragdoll<=0&&u.hitStun<=0){u.vy=JUMP_F;u.onGround=false;u.state='jumping';SFX.jump();}}
+function dash3D(){const u=player3D.userData;if(u.dashing>0||u.ragdoll>0||u.hitStun>0)return;u.dashing=14;u.dashVx=u.facing*DASH_SP;u.dashVz=0;u.state='dashing';SFX.dash();}
+function sideDash3D(dx){const u=player3D.userData;if(u.dashing>0||u.ragdoll>0||u.hitStun>0)return;u.dashing=14;u.dashVx=dx*DASH_SP;u.dashVz=0;u.state='dashing';SFX.dash();}
+function getNearestEnemy(){
+  if(gameMode==='vs')return enemy3D&&enemy3D.userData.alive?enemy3D:null;
+  let near=null,minD=Infinity;
+  enemies.forEach(e=>{if(!e.userData.alive)return;const d=player3D.position.distanceTo(e.position);if(d<minD){minD=d;near=e;}});
+  return near;
+}
+
+function tryInteract(){
+  // Check NPC proximity
+  for(let i=0;i<npcs.length;i++){
+    if(player3D.position.distanceTo(npcs[i].position)<3){
+      talkToNPC(npcs[i].userData.islandIdx);return;
+    }
+  }
+}
+
+// === UI FUNCTIONS ===
+function floatText(pos,text,cls){
+  if(!cam||!pos)return;
+  const el=document.createElement('div');
+  el.className='ft '+cls;el.textContent=text;
+  // Project 3D position to 2D
+  const v=pos.clone();v.y+=2;v.project(cam);
+  const x=(v.x+1)/2*innerWidth,y=(-v.y+1)/2*innerHeight;
+  el.style.left=x+'px';el.style.top=y+'px';
+  document.getElementById('floatText').appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+function showCombo(count,name){
+  if(count<2)return;
+  const el=document.getElementById('cc');
+  el.textContent=count+' HIT COMBO';el.classList.add('show');
+  document.getElementById('cmn').textContent=name||'';
+  setTimeout(()=>el.classList.remove('show'),1500);
+  if(count>=10&&!rpg.achievements.includes('combo_king')){rpg.achievements.push('combo_king');announce("🏆 Combo King","10+ Hit Combo!","");}
+}
+function announce(title,sub,cls){
+  const el=document.getElementById('ann');
+  el.className=cls||'';document.getElementById('annT').textContent=title;document.getElementById('annS').textContent=sub;
+  el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);
+}
+
+function updateRpgHud(){
+  const stats=getStats();
+  // Portrait
+  document.getElementById('fpn').textContent=player3D?player3D.userData.charData.name:'';
+  document.getElementById('fpl').textContent='Lv.'+rpg.level;
+  document.getElementById('ffPFrame').textContent=player3D?player3D.userData.charData.icon:'';
+  // HP/MP
+  if(player3D){const u=player3D.userData;
+    document.getElementById('ffHpFill').style.width=(u.hp/u.maxHp*100)+'%';
+    document.getElementById('ffHpTxt').textContent=Math.ceil(u.hp)+' / '+u.maxHp;
+    document.getElementById('ffMpFill').style.width=(u.super/u.maxSuper*100)+'%';
+    document.getElementById('ffMpTxt').textContent='SUPER '+Math.floor(u.super/u.maxSuper*100)+'%';
+  }
+  // Enemy bar
+  const tgt=getNearestEnemy();
+  const eb=document.getElementById('ffEnemy');
+  if(tgt){const tu=tgt.userData;eb.style.display='block';document.getElementById('ffEnemyNm').textContent=tu.charData.name;document.getElementById('ffEnemyFill').style.width=(tu.hp/tu.maxHp*100)+'%';}
+  else eb.style.display='none';
+  // Abilities
+  if(player3D){const u=player3D.userData;const ac=document.getElementById('ffAbi');ac.innerHTML='';
+    u.charData.moves.forEach((m,i)=>{
+      const s=document.createElement('div');s.className='ffAbiSlot'+(u.moveCds[i]<=0?' ready':'');
+      const cdp=m.cd?(u.moveCds[i]/(m.cd*60))*100:0;
+      s.innerHTML=`<span class="ak">${m.k}</span><span class="an">${m.n.substring(0,8)}</span>${u.moveCds[i]>0?`<div class="acd" style="height:${cdp}%"></div>`:''}`;
+      ac.appendChild(s);
+    });
+  }
+}
+
+function updateMinimap(){
+  const mm=document.getElementById('mmCanvas');const mctx=mm.getContext('2d');
+  mctx.clearRect(0,0,140,140);
+  // Islands
+  ISLANDS.forEach((isl,i)=>{
+    const mx=70+(isl.cx-70)/3,my=70+(isl.cz-70)/3;
+    mctx.fillStyle=i===curIsland?'#f0a020':'#444';mctx.beginPath();mctx.arc(mx,my,10,0,Math.PI*2);mctx.fill();
+  });
+  // Player
+  if(player3D){const px=70+player3D.position.x/3,py=70+player3D.position.z/3;
+    mctx.fillStyle='#22c55e';mctx.beginPath();mctx.arc(px,py,3,0,Math.PI*2);mctx.fill();}
+  // Enemies
+  enemies.forEach(e=>{if(!e.userData.alive)return;const ex=70+e.position.x/3,ey=70+e.position.z/3;
+    mctx.fillStyle=e===rpg.boss?'#ff0033':'#ef4444';mctx.beginPath();mctx.arc(ex,ey,e===rpg.boss?4:2,0,Math.PI*2);mctx.fill();});
+}
+
+// === INVENTORY UI ===
+function toggleInventory(){
+  const el=document.getElementById('inv');
+  el.style.display=el.style.display==='flex'?'none':'flex';
+  if(el.style.display==='flex')updateInventory();
+}
+function updateInventory(){
+  // Equipment slots
+  const eg=document.getElementById('eqGrid');eg.innerHTML='';
+  ['weapon','armor','boots','accessory'].forEach(slot=>{
+    const e=inventory.equipped[slot];
+    const d=document.createElement('div');
+    d.className='eq-slot'+(e?' rarity-'+e.rarity:' empty');
+    d.innerHTML=`<div class="es-type">${slot}</div>${e?`<div class="es-name">${e.icon} ${e.name}</div><div class="es-stat">${formatStats(e.stats)}</div>`:'<div class="es-name">Empty</div>'}`;
+    if(e)d.onclick=()=>{inventory.equipped[slot]=null;inventory.backpack.push(e);updateInventory();};
+    eg.appendChild(d);
+  });
+  // Backpack equipment
+  const bg=document.getElementById('equipBag');bg.innerHTML='';
+  inventory.backpack.forEach((item,i)=>{
+    const d=document.createElement('div');
+    d.className='item-cell rarity-'+item.rarity;
+    d.innerHTML=`<div class="ii">${item.icon}</div><div class="iname">${item.name}</div>`;
+    d.onmouseenter=(e)=>showTip(item,e,'equip',i);
+    d.onmouseleave=hideTip;
+    bg.appendChild(d);
+  });
+  if(!inventory.backpack.length)bg.innerHTML='<div style="color:#555;font-size:12px;grid-column:1/-1;text-align:center;padding:20px">No equipment in backpack. Defeat enemies to find loot!</div>';
+  // Update essence count
+  const ec=document.getElementById('essenceCount');
+  if(ec)ec.textContent=inventory.materials[0].qty;
+  // Items
+  const ig=document.getElementById('itemGrid');ig.innerHTML='';
+  inventory.items.forEach((item,i)=>{
+    if(item.qty<=0)return;
+    const d=document.createElement('div');
+    d.className='item-cell rarity-common';
+    d.innerHTML=`<div class="ii">${item.icon}</div><div class="iq">x${item.qty}</div><div class="iname">${item.name}</div>`;
+    d.onmouseenter=(e)=>showTip(item,e,'item',i);
+    d.onmouseleave=hideTip;
+    ig.appendChild(d);
+  });
+  // Materials
+  const mg=document.getElementById('matGrid');mg.innerHTML='';
+  inventory.materials.forEach((item,i)=>{
+    if(item.qty<=0)return;
+    const d=document.createElement('div');
+    d.className='item-cell rarity-common';
+    d.innerHTML=`<div class="ii">${item.icon}</div><div class="iq">x${item.qty}</div><div class="iname">${item.name}</div>`;
+    d.onmouseenter=(e)=>showTip(item,e,'mat',i);
+    d.onmouseleave=hideTip;
+    mg.appendChild(d);
+  });
+}
+function formatStats(stats){return Object.entries(stats).map(([k,v])=>`${k.toUpperCase()}+${v}`).join(' ');}
+function showTip(item,e,type,idx){
+  const tip=document.getElementById('invTip');
+  let html=`<h4 style="color:${item.rarity==='legendary'?'#ffaa00':item.rarity==='epic'?'#aa44ff':item.rarity==='rare'?'#4488ff':'#aaa'}">${item.icon} ${item.name}</h4>`;
+  html+=`<div class="it-type">${item.rarity} ${item.slot||'item'}</div>`;
+  if(item.stats)html+=`<div class="it-stat">${formatStats(item.stats)}</div>`;
+  if(item.desc)html+=`<div class="it-desc">${item.desc}</div>`;
+  if(type==='equip'){
+    html+=`<div class="it-btn"><button onclick="window._equipItem(${idx})">EQUIP</button></div>`;
+  }else if(type==='item'&&item.use){
+    html+=`<div class="it-btn"><button onclick="window._useItem(${idx})">USE</button></div>`;
+  }
+  tip.innerHTML=html;tip.style.display='block';
+  tip.style.left=Math.min(e.clientX+15,innerWidth-260)+'px';
+  tip.style.top=Math.min(e.clientY+15,innerHeight-200)+'px';
+}
+function hideTip(){document.getElementById('invTip').style.display='none';}
+window._equipItem=function(idx){
+  const item=inventory.backpack[idx];if(!item)return;
+  const slot=item.slot;
+  if(inventory.equipped[slot]){inventory.backpack.push(inventory.equipped[slot]);}
+  inventory.equipped[slot]=item;inventory.backpack.splice(idx,1);
+  // Apply HP bonus
+  recalcStats();hideTip();updateInventory();
+};
+window._useItem=function(idx){
+  const item=inventory.items[idx];if(!item||item.qty<=0)return;
+  if(item.use==='heal40'){player3D.userData.hp=Math.min(player3D.userData.maxHp,player3D.userData.hp+40);floatText(player3D.position,"+40 HP","heal");}
+  if(item.use==='xp100'){gainXP(100);}
+  item.qty--;hideTip();updateInventory();
+};
+function recalcStats(){
+  if(!player3D)return;
+  const baseHp=CHARS[selectedIdx].hp+(rpg.level-1)*15;
+  let bonusHp=0;
+  for(let slot in inventory.equipped){const e=inventory.equipped[slot];if(e&&e.stats&&e.stats.hp)bonusHp+=e.stats.hp;}
+  player3D.userData.maxHp=baseHp+bonusHp;
+  player3D.userData.hp=Math.min(player3D.userData.hp,player3D.userData.maxHp);
+}
+
+// === QUEST LOG ===
+function toggleQuestLog(){
+  const el=document.getElementById('questLog');
+  el.style.display=el.style.display==='flex'?'none':'flex';
+  if(el.style.display==='flex')updateQuestLog();
+}
+function updateQuestLog(){
+  const ql=document.getElementById('questList');ql.innerHTML='';
+  ISLANDS.forEach((isl,i)=>{
+    const qs=rpg.quests[i];
+    const d=document.createElement('div');
+    d.className='quest-item'+(qs.active?' active':'');
+    let status=qs.completed?'<div class="qdone">✓ Completed!</div>':qs.active?'<div class="qprog">Progress: '+qs.progress+'/'+isl.npc.quest.target+'</div>':'<div style="color:#666;font-size:11px">Not started — talk to '+isl.npc.name+'</div>';
+    d.innerHTML=`<div class="qtitle">${isl.npc.icon} ${isl.npc.name}'s Challenge (${isl.name})</div><div class="qdesc">${isl.npc.dialog}</div>${status}<div class="qreward">Reward: ${isl.npc.quest.reward.item.icon} ${isl.npc.quest.reward.item.name} +${isl.npc.quest.reward.xp} XP</div>`;
+    ql.appendChild(d);
+  });
+}
+
+// === MOBILE ===
+function setupMobile(){
+  document.querySelectorAll('.mb').forEach(btn=>{
+    const a=btn.dataset.a,k=btn.dataset.k;
+    btn.addEventListener('touchstart',e=>{
+      e.preventDefault();initAudio();
+      if(k==='i'){toggleInventory();return;}
+      if(k==='j'){toggleQuestLog();return;}
+      if(k==='t'){openFastTravel();return;}
+      if(k){keys[k]=true;}
+      else if(player3D){if(a==='atk')doM1(player3D,getNearestEnemy());else if(a==='jmp')jump3D();else if(a==='dsh')dash3D();else if(a==='skl')startMove(player3D,0,getNearestEnemy());}
+    });
+    btn.addEventListener('touchend',e=>{e.preventDefault();if(k&&k!=='i'&&k!=='j')keys[k]=false;});
+  });
+}
+function shouldShowMobile(){if(settings.mobile==='on')return true;if(settings.mobile==='off')return false;return('ontouchstart'in window)||navigator.maxTouchPoints>0;}
+
+
+// === BOSS SYSTEM ===
+function spawnBoss(islandIdx){
+  if(rpg.boss){return;}
+  const isl=ISLANDS[islandIdx];
+  const bossChar=CHARS[isl.enemyChar[Math.floor(Math.random()*isl.enemyChar.length)]];
+  const boss=buildChar(bossChar,true);
+  const bossMul=2+isl.enemyLevel*0.5;
+  boss.userData.maxHp=Math.floor(bossChar.hp*bossMul);
+  boss.userData.hp=boss.userData.maxHp;
+  boss.userData.atk=Math.floor((bossChar.atk||5)*bossMul*0.8);
+  boss.userData.charData={...bossChar,name:bossChar.name+" [BOSS]"};
+  // Scale boss model bigger
+  boss.scale.set(1.5,1.5,1.5);
+  // Position near center of island
+  boss.position.set(isl.cx+5,0,isl.cz-5);
+  scene.add(boss);
+  rpg.boss=boss;
+  enemies.push(boss);
+  // Show boss bar
+  document.getElementById('bossBar').style.display='block';
+  document.getElementById('bossNm').textContent=bossChar.name+" [BOSS]";
+  announce("⚠ BOSS BATTLE!",bossChar.name+" has appeared!","");
+  SFX.special();
+}
+
+function updateBossBar(){
+  if(!rpg.boss||!rpg.boss.userData.alive){
+    document.getElementById('bossBar').style.display='none';
+    if(rpg.boss&&!rpg.boss.userData.alive){
+      // Boss defeated
+      const bossChar=rpg.boss.userData.charData;
+      gainXP(200+ISLANDS[curIsland].enemyLevel*50);
+      dropLoot(rpg.boss.position); // guaranteed drop
+      dropLoot(rpg.boss.position); // double drop for boss
+      rpg.bossesDefeated++;
+      announce("BOSS DEFEATED!","+"+(200+ISLANDS[curIsland].enemyLevel*50)+" XP!","");
+      rpg.boss=null;
+      checkAchievements();
+    }
+    return;
+  }
+  const u=rpg.boss.userData;
+  document.getElementById('bossFill').style.width=(u.hp/u.maxHp*100)+'%';
+}
+
+// === CRAFTING SYSTEM ===
+window._craft=function(rarity){
+  const essence=inventory.materials[0];
+  if(rarity==='potion'){
+    if(essence.qty<2){announce("Not enough essence","Need 2 🔮","");return;}
+    essence.qty-=2;
+    inventory.items.find(i=>i.id==='hp_potion').qty++;
+    SFX.pickup();
+    announce("CRAFTED!","🧪 Health Potion","");
+  }else{
+    const costs={rare:5,epic:10,legendary:20};
+    const cost=costs[rarity];
+    if(essence.qty<cost){announce("Not enough essence","Need "+cost+" 🔮","");return;}
+    essence.qty-=cost;
+    const pool=LOOT_TABLE.filter(l=>l.rarity===rarity);
+    const item=pool[Math.floor(Math.random()*pool.length)];
+    inventory.backpack.push({...item,stats:{...item.stats}});
+    SFX.pickup();
+    announce("CRAFTED! "+item.icon+" "+item.name,rarity.toUpperCase()+" equipment!","");
+  }
+  updateInventory();
+};
+
+// === FAST TRAVEL ===
+function openFastTravel(){
+  if(gameMode!=='world')return;
+  const el=document.getElementById('travel');
+  el.style.display='flex';
+  const list=document.getElementById('travelList');
+  list.innerHTML='';
+  ISLANDS.forEach((isl,i)=>{
+    const btn=document.createElement('button');
+    const isCurrent=i===curIsland;
+    const qs=rpg.quests[i];
+    let status=qs&&qs.completed?'✅ Cleared':'🔓 Available';
+    if(isCurrent)status='📍 Current Location';
+    btn.style.cssText='padding:12px;background:rgba(30,30,45,0.8);border:2px solid '+(isCurrent?'#f0a020':'#444')+';color:#ddd;border-radius:8px;cursor:pointer;font-family:inherit;text-align:left;display:flex;justify-content:space-between;align-items:center;font-size:13px;';
+    btn.innerHTML='<div><div style="color:#f0a020;font-weight:bold">'+isl.name+'</div><div style="color:#888;font-size:10px;margin-top:2px">'+isl.sub+' | Lv.'+isl.enemyLevel+' enemies</div></div><div style="color:'+(isCurrent?'#f0a020':'#22c55e')+';font-size:11px">'+status+'</div>';
+    if(!isCurrent){
+      btn.onclick=()=>{
+        curIsland=i;
+        player3D.position.set(isl.cx,0,isl.cz+5);
+        enemies.forEach(e=>scene.remove(e));enemies=[];
+        for(let j=0;j<3;j++)spawnEnemy();
+        if(rpg.boss){scene.remove(rpg.boss);enemies=enemies.filter(e=>e!==rpg.boss);rpg.boss=null;}
+        document.getElementById('bossBar').style.display='none';
+        showLocation(isl.name,isl.sub);
+        updateQuestTracker();
+        el.style.display='none';
+        SFX.select();
+      };
+    }
+    list.appendChild(btn);
+  });
+}
+
+// === GAME FLOW ===
+function startGame(){
+  initAudio();
+  // Clear
+  if(player3D)scene.remove(player3D);
+  if(enemy3D)scene.remove(enemy3D);
+  enemies.forEach(e=>scene.remove(e));enemies=[];
+  pickups.forEach(p=>scene.remove(p));pickups=[];
+
+  const cd=CHARS[selectedIdx];
+  player3D=buildChar(cd,false);
+  player3D.position.set(ISLANDS[curIsland].cx,1.8,ISLANDS[curIsland].cz+5);
+  scene.add(player3D);
+  // Immediately position camera behind player
+  cam.position.set(player3D.position.x, 8, player3D.position.z+14);
+  cam.lookAt(player3D.position.x, 2, player3D.position.z);
+
+  if(gameMode==='vs'){
+    let eIdx;do{eIdx=Math.floor(Math.random()*CHARS.length)}while(eIdx===selectedIdx);
+    enemy3D=buildChar(CHARS[eIdx],true);
+    enemy3D.position.set(ISLANDS[0].cx+8,0,ISLANDS[0].cz-5);
+    scene.add(enemy3D);
+  }else{
+    enemy3D=null;
+    // Reset RPG
+    rpg={level:1,xp:0,xpNext:100,wave:1,killsThisWave:0,enemiesPerWave:3,totalKills:0,atk:0,def:0,spd:0,critChance:5,critMult:1.5,lifesteal:0,dodgeChance:0,streakKills:0,streakTimer:0,bonusXpMult:1,achievements:[],totalXpEarned:0,quests:rpg.quests};
+    initQuests();
+    // Reset inventory
+    inventory.equipped={weapon:null,armor:null,boots:null,accessory:null};
+    inventory.backpack=[];inventory.items=CONSUMABLES.map(c=>({...c}));inventory.materials[0].qty=0;
+    recalcStats();
+    // Spawn initial enemies
+    for(let i=0;i<3;i++)spawnEnemy();
+  }
+  gameState='fighting';
+  document.getElementById('menu').style.display='none';
+  document.getElementById('csel').style.display='none';
+  document.getElementById('hud').style.display='block';
+  document.getElementById('ffHud').style.display='block';
+  document.getElementById('ffPortrait').style.display='flex';
+  document.getElementById('ffQuest').style.display='block';
+  document.getElementById('minimap').style.display='block';
+  document.getElementById('gear').style.display='flex';
+  if(gameMode==='world'){
+    showLocation(ISLANDS[curIsland].name,ISLANDS[curIsland].sub);
+    updateQuestTracker();
+  }
+  if(shouldShowMobile())document.getElementById('mob').classList.add('show');
+  showGameUI(true);
+  announce(gameMode==='world'?'OPEN WORLD':'FIGHT!',gameMode==='world'?'Explore the islands!':'','');
+}
+
+function spawnEnemy(){
+  if(enemies.length>=3)return;
+  const isl=ISLANDS[curIsland];
+  let eIdx;do{eIdx=isl.enemyChar[Math.floor(Math.random()*isl.enemyChar.length)]}while(eIdx===selectedIdx);
+  const eChar=CHARS[eIdx];
+  const enemy=buildChar(eChar,true);
+  const waveMul=1+(isl.enemyLevel-1)*0.2;
+  enemy.userData.maxHp=Math.floor(eChar.hp*waveMul);
+  enemy.userData.hp=enemy.userData.maxHp;
+  enemy.userData.atk=Math.floor((eChar.atk||5)*waveMul);
+  const a=Math.random()*Math.PI*2,d=8+Math.random()*12;
+  enemy.position.set(isl.cx+Math.cos(a)*d,0,isl.cz+Math.sin(a)*d);
+  scene.add(enemy);enemies.push(enemy);
+}
+
+function showLocation(name,sub){
+  const el=document.getElementById('locName');
+  document.getElementById('ln').textContent=name;document.getElementById('ls').textContent=sub;
+  el.style.display='block';setTimeout(()=>el.style.display='none',2500);
+}
+
+function returnToMenu(){
+  gameState='menu';
+  if(player3D){scene.remove(player3D);player3D=null;}
+  if(enemy3D){scene.remove(enemy3D);enemy3D=null;}
+  enemies.forEach(e=>scene.remove(e));enemies=[];
+  pickups.forEach(p=>scene.remove(p));pickups=[];
+  document.getElementById('hud').style.display='none';
+  document.getElementById('ffHud').style.display='none';
+  document.getElementById('ffPortrait').style.display='none';
+  document.getElementById('ffQuest').style.display='none';
+  document.getElementById('minimap').style.display='none';
+  document.getElementById('gear').style.display='none';
+  document.getElementById('mob').classList.remove('show');
+  document.getElementById('go').style.display='none';
+  showGameUI(false);
+  document.getElementById('chatPanel').classList.remove('open');
+  document.getElementById('bossBar').style.display='none';
+  document.getElementById('travel').style.display='none';
+  rpg.boss=null;
+  document.getElementById('menu').style.display='flex';
+}
+
+function endGame(won){
+  gameState='gameOver';
+  document.getElementById('goT').textContent=won?'VICTORY':'DEFEAT';
+  if(gameMode==='world'){
+    document.getElementById('goS').innerHTML=`Reached ${ISLANDS[curIsland].name} | Level ${rpg.level}<br>${rpg.totalKills} kills | ${rpg.achievements.length} achievements`;
+  }else{
+    document.getElementById('goS').textContent=won?player3D.userData.charData.name+' wins!':(enemy3D?enemy3D.userData.charData.name:'Enemy')+' wins!';
+  }
+  document.getElementById('go').style.display='flex';
+  document.getElementById('mob').classList.remove('show');
+}
+
+// === ISLAND TRANSITION ===
+function checkIslandTransition(){
+  if(gameMode!=='world')return;
+  const px=player3D.position.x,pz=player3D.position.z;
+  ISLANDS.forEach((isl,i)=>{
+    if(i===curIsland)return;
+    const dx=px-isl.cx,dz=pz-isl.cz,dist=Math.sqrt(dx*dx+dz*dz);
+    if(dist<ISLAND_R+3){
+      curIsland=i;
+      // Remove old enemies
+      enemies.forEach(e=>scene.remove(e));enemies=[];
+      // Spawn new
+      for(let j=0;j<3;j++)spawnEnemy();
+      showLocation(isl.name,isl.sub);
+      updateQuestTracker();
+    }
+  });
+}
+
+// === GAME LOOP ===
+function loop(ts){
+  if(!lastTime){lastTime=ts;requestAnimationFrame(loop);return;}
+  let delta=ts-lastTime;lastTime=ts;
+  // Cap delta to prevent spiral of death (e.g. after tab switch)
+  if(delta>100)delta=100;
+  if(gameState==='fighting'){
+    frameAcc+=delta;
+    let safety=0;
+    while(frameAcc>=frameTime&&safety<5){updateGame();frameAcc-=frameTime;safety++;}
+  }
+  if(renderer&&scene&&cam)renderer.render(scene,cam);
+  requestAnimationFrame(loop);
+}
+
+function updateGame(){
+  gameFrame++;
+  if(!player3D)return;
+  const u=player3D.userData;
+  // Player movement
+  if(u.ragdoll<=0&&u.hitStun<=0&&!u.attacking&&u.alive){
+    let mx=0,mz=0,moved=false;
+    if(keys['a']||keys['arrowleft']){mx-=1;moved=true;}
+    if(keys['d']||keys['arrowright']){mx+=1;moved=true;}
+    if(keys['w']||keys['arrowup']){mz-=1;moved=true;}
+    if(keys['s']||keys['arrowdown']){mz+=1;moved=true;}
+    const stats=getStats();
+    const sp=MOVE_SP*(u.charData.spd/6)*(1+stats.spd*0.05);
+    if(moved){
+      const len=Math.sqrt(mx*mx+mz*mz)||1;
+      player3D.position.x+=(mx/len)*sp;player3D.position.z+=(mz/len)*sp;
+      if(Math.abs(mx)>0.1)u.facing=mx>0?1:-1;
+      player3D.rotation.y=u.facing>0?0:Math.PI;
+      u.state='walking';
+    }else if(u.state==='walking')u.state='idle';
+    // Block (only block when S is held without W - prevents blocking from blocking backward movement)
+    if((keys['arrowdown']||keys['s'])&&!keys['w']&&!keys['arrowup']){u.blocking=true;}else{u.blocking=false;}
+  }
+  updateFighter(player3D,getNearestEnemy());
+  if(enemy3D)updateFighter(enemy3D,player3D);
+  enemies.forEach(e=>updateFighter(e,player3D));
+  // NPC idle
+  npcs.forEach(npc=>{npc.userData.animTime+=.05;npc.userData.armLPivot.rotation.x=Math.sin(npc.userData.animTime)*.05;npc.userData.armRPivot.rotation.x=Math.sin(npc.userData.animTime+Math.PI)*.05;});
+  // Remove boss if defeated
+  if(rpg.boss&&!rpg.boss.userData.alive&&rpg.boss.userData.ragdoll<9000){
+    scene.remove(rpg.boss);
+    enemies=enemies.filter(e=>e!==rpg.boss);
+    // Boss rewards
+    const rewardXp=200+ISLANDS[curIsland].enemyLevel*50;
+    gainXP(rewardXp);
+    dropLoot(rpg.boss.position);
+    dropLoot(rpg.boss.position);
+    rpg.bossesDefeated++;
+    rpg.boss=null;
+    document.getElementById('bossBar').style.display='none';
+    announce('BOSS DEFEATED!','+'+rewardXp+' XP + Legendary Loot!','');
+    checkAchievements();
+  }
+  // Remove dead enemies & respawn
+  for(let i=enemies.length-1;i>=0;i--){
+    if(!enemies[i].userData.alive&&enemies[i].userData.ragdoll<9000){
+      scene.remove(enemies[i]);enemies.splice(i,1);
+    }
+  }
+  if(gameMode==='world'&&enemies.length<3&&player3D.userData.alive)spawnEnemy();
+  // Pickups
+  updatePickups();
+  updateParticles();
+  updateCamera();
+  updateRpgHud();
+  if(gameFrame%10===0)updateMinimap();
+  if(gameFrame%120===0){const op=document.getElementById('ownerPanel');if(op&&op.style.display==='flex')updateOwnerStats();}
+  updateBossBar();
+  // Interact prompt
+  let nearNPC=false;
+  npcs.forEach(npc=>{if(player3D.position.distanceTo(npc.position)<3)nearNPC=true;});
+  document.getElementById('prompt').style.display=nearNPC?'block':'none';
+  // Island transition
+  if(gameFrame%30===0)checkIslandTransition();
+  // Win/lose
+  if(player3D&&!player3D.userData.alive&&gameState==='fighting')setTimeout(()=>endGame(false),1500);
+  if(gameMode==='vs'&&enemy3D&&!enemy3D.userData.alive&&gameState==='fighting')setTimeout(()=>endGame(true),1500);
+}
+
+// === CHAR SELECT ===
+function buildCharSelect(){
+  const g=document.getElementById('cgrid');g.innerHTML='';
+  CHARS.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='ccard'+(i===selectedIdx?' sel':'');
+    const hex='#'+c.color.toString(16).padStart(6,'0');
+    d.innerHTML=`<div class="ci" style="border-color:${hex};color:${hex}">${c.icon}</div><div class="cn">${c.name}</div><div class="ct">${c.tag}</div>${c.exc?'<div class="ce">EXCLUSIVE</div>':''}`;
+    d.onclick=()=>{selectedIdx=i;SFX.select();buildCharSelect();showCharInfo(i);};
+    g.appendChild(d);
+  });
+  showCharInfo(selectedIdx);
+}
+function showCharInfo(idx){
+  const c=CHARS[idx];const hex='#'+c.color.toString(16).padStart(6,'0');
+  let html=c.passive?`<div class="pa"><b>Passive:</b> ${c.passive}</div>`:'';
+  c.moves.forEach(m=>{html+=`<div><b>[${m.k}] ${m.n}</b> — ${m.d}</div>`;});
+  html+=`<div class="statr"><span>HP:${c.hp}</span><span>ATK:${c.atk}</span><span>DEF:${c.def}</span><span>SPD:${c.spd}</span></div>`;
+  document.getElementById('cinfo').innerHTML=`<h3 style="color:${hex}">${c.icon} ${c.name}</h3><div class="ml">${html}</div>`;
+}
+
+// === SETTINGS ===
+function setupSettings(){
+  document.getElementById('gear').onclick=()=>{initAudio();document.getElementById('set2').classList.toggle('open');};
+  document.getElementById('s2c').onclick=()=>document.getElementById('set2').classList.remove('open');
+  document.getElementById('s2g').onchange=e=>{settings.gfx=parseInt(e.target.value);frameTime=settings.gfx>0?1000/settings.gfx:0;};
+  document.getElementById('s2q').oninput=e=>{settings.quality=parseInt(e.target.value);document.getElementById('s2qv').textContent=e.target.value;if(renderer)renderer.setPixelRatio(Math.min(devicePixelRatio,settings.quality>=3?2:1));};
+  document.getElementById('s2sh').onchange=e=>{settings.shadows=parseInt(e.target.value);if(renderer)renderer.shadowMap.enabled=settings.shadows===1;};
+  document.getElementById('s2mv').oninput=e=>{settings.masterVol=parseInt(e.target.value)/100;document.getElementById('s2mvv').textContent=e.target.value+'%';};
+  document.getElementById('s2sv').oninput=e=>{settings.sfxVol=parseInt(e.target.value)/100;document.getElementById('s2svv').textContent=e.target.value+'%';};
+  document.getElementById('s2mo').onchange=e=>{settings.mobile=e.target.value;if(gameState==='fighting')document.getElementById('mob').classList.toggle('show',shouldShowMobile());};
+}
+
+// === INIT ===
+function initGame(){
+  document.getElementById('loadFill').style.width='50%';document.getElementById('loadTxt').textContent='Creating islands...';
+  initChat();
+  initThree();setupSettings();setupMobile();initQuests();
+  document.getElementById('bRPG').onclick=()=>{initAudio();SFX.select();gameMode='world';curIsland=0;document.getElementById('menu').style.display='none';document.getElementById('csel').style.display='flex';buildCharSelect();};
+  document.getElementById('bVS').onclick=()=>{initAudio();SFX.select();gameMode='vs';curIsland=0;document.getElementById('menu').style.display='none';document.getElementById('csel').style.display='flex';buildCharSelect();};
+  document.getElementById('bHow').onclick=()=>alert('HOW TO PLAY — OPEN WORLD RPG\n\nCONTROLS:\nWASD/Arrows: Move in 3D world\nM1/Click: Punch (chain 4x)\nSPACE: Jump | E: Dash | Q+A/D: Side Dash\n1-5: Special moves\nF: Talk to NPCs | I: Inventory | J: Quest Log\nESC: Menu\n\nRPG MODE:\nExplore 4 islands! Each has NPCs with quests.\nDefeat enemies to gain XP, level up, and find loot.\nEquip weapons, armor, boots, and accessories!\nCrit, Lifesteal, Dodge stats unlock as you level.\nKill streaks give XP multipliers!\n\nVS CPU:\nClassic 1v1 fight against AI opponent.\n\nMobile: On-screen buttons for all actions.');
+  document.getElementById('startB').onclick=startGame;
+  document.getElementById('goR').onclick=()=>{document.getElementById('go').style.display='none';startGame();};
+  document.getElementById('goM').onclick=returnToMenu;
+  document.getElementById('invClose').onclick=()=>document.getElementById('inv').style.display='none';
+  document.getElementById('questClose').onclick=()=>document.getElementById('questLog').style.display='none';
+  // Inv tabs
+  document.querySelectorAll('.inv-tab').forEach(t=>{t.onclick=()=>{
+    document.querySelectorAll('.inv-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+    document.getElementById('invEquip').classList.toggle('hidden',t.dataset.tab!=='equip');
+    document.getElementById('invItems').classList.toggle('hidden',t.dataset.tab!=='items');
+    document.getElementById('invMats').classList.toggle('hidden',t.dataset.tab!=='mats');
+    document.getElementById('invCraft').classList.toggle('hidden',t.dataset.tab!=='craft');
+  };});
+  document.getElementById('loadFill').style.width='100%';document.getElementById('loadTxt').textContent='Ready!';
+  setTimeout(()=>{document.getElementById('load').style.opacity='0';setTimeout(()=>document.getElementById('load').style.display='none',300);},300);
+  requestAnimationFrame(loop);
+}
+
+
+// ============================================================
+// CHAT SYSTEM
+// ============================================================
+const chatHistory = [];
+let chatPlayerName = '';
+
+function initChat(){
+  const panel = document.getElementById('chatPanel');
+  const btn = document.getElementById('chatBtn');
+  const sendBtn = document.getElementById('chatSend');
+  const input = document.getElementById('chatTxt');
+  btn.onclick = () => { panel.classList.toggle('open'); if(panel.classList.contains('open')){ input.focus(); } };
+  sendBtn.onclick = sendChat;
+  input.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); sendChat(); } });
+  // System messages
+  addChatMsg('system','GAME','Welcome to Arena Brawl! Type /admin for admin panel or /ownerpanel for owner controls.');
+  addChatMsg('system','GAME','Controls: WASD=move, Click=punch, SPACE=jump, E=dash, 1-4=skills, F=interact, I=inventory, J=quests, T=fast travel');
+  addChatMsg('system','GAME','Chat: /admin /ownerpanel /heal /xp /level /help');
+  // Command shortcuts
+  input.addEventListener('keydown', e => {
+    if(e.key==='/' && input.value===''){
+      input.value='/'; e.preventDefault();
+    }
+  });
+}
+
+function sendChat(){
+  const input = document.getElementById('chatTxt');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+  input.blur();
+  // Handle commands
+  if(msg.toLowerCase()==='/admin'){
+    openAdmin(); return;
+  }
+  if(msg.toLowerCase()==='/ownerpanel'||msg.toLowerCase()==='/owner'){
+    openOwnerPanel(); return;
+  }
+  if(msg.toLowerCase()==='/help'){
+    addChatMsg('system','HELP','Commands: /admin, /ownerpanel, /heal, /xp, /level, /clear');
+    return;
+  }
+  if(msg.toLowerCase()==='/heal'){
+    if(player3D){player3D.userData.hp=player3D.userData.maxHp;addChatMsg('system','CHEAT','Player healed to full HP!');}
+    return;
+  }
+  if(msg.toLowerCase().startsWith('/xp ')){
+    const amt=parseInt(msg.split(' ')[1]);
+    if(!isNaN(amt)&&amt>0){gainXP(amt);addChatMsg('system','CHEAT','+'+amt+' XP granted!');}
+    return;
+  }
+  if(msg.toLowerCase().startsWith('/level ')){
+    const lv=parseInt(msg.split(' ')[1]);
+    if(!isNaN(lv)&&lv>=1&&lv<=30){
+      while(rpg.level<lv){rpg.level++;rpg.atk+=2;rpg.def+=1;rpg.spd+=1;}
+      if(player3D){player3D.userData.maxHp=CHARS[selectedIdx].hp+(rpg.level-1)*15;player3D.userData.hp=player3D.userData.maxHp;}
+      addChatMsg('system','CHEAT','Level set to '+lv+'!');
+    }
+    return;
+  }
+  if(msg.toLowerCase()==='/clear'){
+    document.getElementById('chatMsgs').innerHTML=''; return;
+  }
+  if(msg.toLowerCase()==='/god'){
+    if(player3D){
+      player3D.userData.hp=99999;player3D.userData.maxHp=99999;
+      rpg.atk=500;rpg.def=500;rpg.critChance=100;rpg.lifesteal=100;rpg.dodge=50;
+      addChatMsg('admin','CHEAT','GOD MODE ACTIVATED!');SFX.special();
+    }
+    return;
+  }
+  if(msg.toLowerCase()==='/spawn'){
+    for(let i=0;i<5;i++)spawnEnemy();
+    addChatMsg('admin','CHEAT','Spawned 5 enemies!');return;
+  }
+  if(msg.toLowerCase()==='/boss'){
+    spawnBoss(curIsland);
+    addChatMsg('admin','CHEAT','Boss spawned!');return;
+  }
+  // Normal chat
+  const name = player3D ? player3D.userData.charData.name : 'Player';
+  addChatMsg('player', name, msg);
+  // Auto-respond for fun
+  const responses = ['Nice move!','Lets fight!','Watch out for the boss!','Check your inventory!','Try crafting a legendary item!','Fast travel with T key!'];
+  if(Math.random()<0.3){
+    setTimeout(()=>addChatMsg('system','GAME',responses[Math.floor(Math.random()*responses.length)]),800);
+  }
+}
+
+function addChatMsg(type, name, text){
+  const msgs = document.getElementById('chatMsgs');
+  const div = document.createElement('div');
+  div.className = 'chat-msg '+type;
+  div.innerHTML = '<div class="cn">'+name+'</div>'+escapeHtml(text);
+  msgs.appendChild(div);
+  chatHistory.push({type,name,text,time:Date.now()});
+  msgs.scrollTop = msgs.scrollHeight;
+  // Trim to 100 messages
+  while(msgs.children.length>100)msgs.removeChild(msgs.firstChild);
+}
+
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+let adminLog = [];
+function alog(msg){ adminLog.push('['+new Date().toLocaleTimeString()+'] '+msg); const el=document.getElementById('adminLog'); if(el){el.innerHTML=adminLog.slice(-20).join('<br>');el.scrollTop=el.scrollHeight;} addChatMsg('admin','ADMIN',msg); }
+
+function openAdmin(){
+  if(gameState!=='fighting'){addChatMsg('system','ADMIN','Start a game first!');return;}
+  const el=document.getElementById('adminPanel');
+  el.style.display='flex';
+  // Populate with current values
+  if(player3D){document.getElementById('adHP').value=Math.ceil(player3D.userData.hp);}
+  document.getElementById('adLV').value=rpg.level;
+  alog('Admin panel opened');
+}
+function closeAdmin(){ document.getElementById('adminPanel').style.display='none'; }
+window.closeAdmin=closeAdmin;
+
+function adminCmd(cmd){
+  if(!player3D){alog('No active game!');return;}
+  const u=player3D.userData;
+  if(cmd==='setHP'){
+    const v=parseInt(document.getElementById('adHP').value)||100;
+    u.hp=Math.min(Math.max(v,1),u.maxHp);alog('Player HP set to '+Math.ceil(u.hp));
+  }else if(cmd==='setLevel'){
+    const v=parseInt(document.getElementById('adLV').value)||1;
+    const target=Math.min(Math.max(v,1),30);
+    while(rpg.level<target){rpg.level++;rpg.atk+=2;rpg.def+=1;rpg.spd+=1;rpg.critChance+=2;}
+    if(rpg.level>target){rpg.level=target;}
+    u.maxHp=CHARS[selectedIdx].hp+(rpg.level-1)*15;u.hp=u.maxHp;
+    alog('Level set to '+rpg.level);updateRpgHud();
+  }else if(cmd==='giveXP'){
+    const v=parseInt(document.getElementById('adXP').value)||500;
+    gainXP(v);alog('Gave '+v+' XP');
+  }else if(cmd==='heal'){
+    u.hp=u.maxHp;alog('Player fully healed');
+  }else if(cmd==='kill'){
+    u.hp=0;u.alive=false;u.state='ko';u.ragdoll=99999;alog('Player killed');SFX.ko();
+  }else if(cmd==='teleport'){
+    const idx=parseInt(document.getElementById('adIsland').value);
+    const isl=ISLANDS[idx];
+    curIsland=idx;
+    player3D.position.set(isl.cx,0,isl.cz+5);
+    enemies.forEach(e=>scene.remove(e));enemies=[];
+    for(let i=0;i<3;i++)spawnEnemy();
+    if(rpg.boss){scene.remove(rpg.boss);enemies=enemies.filter(e=>e!==rpg.boss);rpg.boss=null;}
+    document.getElementById('bossBar').style.display='none';
+    showLocation(isl.name,isl.sub);updateQuestTracker();
+    alog('Teleported to '+isl.name);
+  }else if(cmd==='spawnBossNow'){
+    spawnBoss(curIsland);alog('Boss spawned on '+ISLANDS[curIsland].name);
+  }else if(cmd==='clearEnemies'){
+    enemies.forEach(e=>scene.remove(e));enemies=[];rpg.boss=null;
+    document.getElementById('bossBar').style.display='none';
+    alog('All enemies cleared');
+  }else if(cmd==='spawnEnemy3'){
+    for(let i=0;i<3;i++)spawnEnemy();alog('Spawned 3 enemies');
+  }else if(cmd==='giveAllGear'){
+    LOOT_TABLE.forEach(l=>inventory.backpack.push({...l,stats:{...l.stats}}));
+    alog('All gear added to backpack');updateInventory();
+  }else if(cmd==='give100Essence'){
+    inventory.materials[0].qty+=100;alog('+100 Monster Essence');updateInventory();
+  }else if(cmd==='give10Potions'){
+    inventory.items.find(i=>i.id==='hp_potion').qty+=10;alog('+10 Health Potions');updateInventory();
+  }else if(cmd==='clearInv'){
+    inventory.backpack=[];alog('Backpack cleared');updateInventory();
+  }
+}
+window.adminCmd=adminCmd;
+
+// ============================================================
+// OWNER PANEL
+// ============================================================
+let owLog = [];
+
+function openOwnerPanel(){
+  const el=document.getElementById('ownerPanel');
+  el.style.display='flex';
+  updateOwnerStats();
+  // Sync config inputs with current values
+  document.getElementById('owDmgMult').value=ownerConfig.dmgMult;
+  document.getElementById('owXpMult').value=ownerConfig.xpMult;
+  document.getElementById('owLootRate').value=ownerConfig.lootRate;
+  ownerLog('Owner panel opened');
+}
+function closeOwner(){ document.getElementById('ownerPanel').style.display='none'; }
+window.closeOwner=closeOwner;
+
+function ownerLog(msg){ owLog.push('['+new Date().toLocaleTimeString()+'] '+msg); const el=document.getElementById('owLog'); if(el){el.innerHTML=owLog.slice(-20).join('<br>');el.scrollTop=el.scrollHeight;} }
+
+function updateOwnerStats(){
+  document.getElementById('owOnline').textContent='1';
+  document.getElementById('owMaxLv').textContent=rpg.level;
+  document.getElementById('owKills').textContent=rpg.totalKills;
+  document.getElementById('owBoss').textContent=rpg.bossesDefeated||0;
+  document.getElementById('owIslands').textContent=Object.values(rpg.quests).filter(q=>q&&q.completed).length+'/'+ISLANDS.length;
+}
+
+function applyOwnerConfig(){
+  ownerConfig.dmgMult=parseFloat(document.getElementById('owDmgMult').value)||1;
+  ownerConfig.xpMult=parseFloat(document.getElementById('owXpMult').value)||1;
+  ownerConfig.lootRate=parseFloat(document.getElementById('owLootRate').value)||0.3;
+  ownerLog('Config applied: dmg='+ownerConfig.dmgMult+'x xp='+ownerConfig.xpMult+'x loot='+ownerConfig.lootRate);
+  announce('Config Updated!','Changes applied by Owner','');
+}
+window.applyOwnerConfig=applyOwnerConfig;
+
+function ownerCmd(cmd){
+  if(cmd==='broadcast'){
+    const msg=document.getElementById('owMsg').value.trim();
+    if(msg){announce('📢 '+msg,'','');addChatMsg('admin','OWNER',msg);ownerLog('Broadcast: '+msg);document.getElementById('owMsg').value='';}
+  }else if(cmd==='reset'){
+    returnToMenu();ownerLog('Game reset to menu');closeOwner();
+  }else if(cmd==='kickAll'){
+    returnToMenu();closeOwner();ownerLog('Forced all players to menu');
+  }else if(cmd==='saveState'){
+    try{
+      const state={rpg,inventory:{equipped:inventory.equipped,items:inventory.items,materials:inventory.materials},level:rpg.level,island:curIsland};
+      localStorage.setItem('arenaBrawlSave',JSON.stringify(state));
+      ownerLog('Game state saved to localStorage');
+      announce('Game Saved!','State stored locally','');
+    }catch(e){ownerLog('Save failed: '+e.message);}
+  }else if(cmd==='loadState'){
+    try{
+      const s=localStorage.getItem('arenaBrawlSave');
+      if(s){
+        const state=JSON.parse(s);
+        Object.assign(rpg,state.rpg||{});
+        Object.assign(inventory,state.inventory||{});
+        ownerLog('Game state loaded from localStorage');
+        announce('Game Loaded!','State restored','');
+        updateRpgHud();updateInventory();
+      }else{ownerLog('No saved state found');}
+    }catch(e){ownerLog('Load failed: '+e.message);}
+  }else if(cmd==='exportLog'){
+    const log=chatHistory.map(m=>'['+new Date(m.time).toLocaleTimeString()+'] '+m.name+': '+m.text).join('\n');
+    const blob=new Blob([log],{type:'text/plain'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='arena-brawl-chat.txt';a.click();
+    ownerLog('Chat log exported');
+  }
+}
+window.ownerCmd=ownerCmd;
+
+// ============================================================
+// SHOW CHAT + ADMIN BUTTONS IN GAME
+// ============================================================
+function showGameUI(visible){
+  const cb=document.getElementById('chatBtn');
+  if(cb)cb.style.display=visible?'flex':'none';
+}
+
+})();
+</script>
+
+<!-- Chat -->
+<button id="chatBtn" title="Chat">💬</button>
+<div id="chatPanel">
+  <div id="chatHeader"><span>💬 GAME CHAT</span><button onclick="document.getElementById('chatPanel').classList.remove('open')" style="background:none;border:none;color:#888;cursor:pointer;font-size:14px;">✕</button></div>
+  <div id="chatMsgs"></div>
+  <div id="chatInput"><input id="chatTxt" type="text" placeholder="Type a message..." maxlength="80" /><button id="chatSend">Send</button></div>
+</div>
+
+<!-- Admin Panel (/admin) -->
+<div id="adminPanel">
+  <div id="adminBox">
+    <button onclick="closeAdmin()" style="position:absolute;top:14px;right:18px;background:#333;color:#fff;border:none;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px;">✕</button>
+    <h2>🛡️ ADMIN PANEL</h2>
+    <div class="admin-section">
+      <h3>⚔️ Player Controls</h3>
+      <div class="admin-row"><label>Set Player HP</label><input id="adHP" type="number" value="100" min="1" max="9999"></div>
+      <div class="admin-row"><label>Set Player Level</label><input id="adLV" type="number" value="1" min="1" max="30"></div>
+      <div class="admin-row"><label>Give XP</label><input id="adXP" type="number" value="500" min="0"></div>
+      <div style="margin-top:8px">
+        <button class="admin-btn green" onclick="adminCmd('setHP')">Set HP</button>
+        <button class="admin-btn green" onclick="adminCmd('setLevel')">Set Level</button>
+        <button class="admin-btn green" onclick="adminCmd('giveXP')">Give XP</button>
+        <button class="admin-btn gold" onclick="adminCmd('heal')">Full Heal</button>
+        <button class="admin-btn" onclick="adminCmd('kill')">Kill Player</button>
+      </div>
+    </div>
+    <div class="admin-section">
+      <h3>🌍 World Controls</h3>
+      <div class="admin-row"><label>Teleport to Island</label><select id="adIsland"><option value="0">Beginner's Shore</option><option value="1">Warrior's Peak</option><option value="2">Shadow Realm</option><option value="3">Celestial Arena</option></select></div>
+      <div class="admin-row"><label>Wave Number</label><input id="adWave" type="number" value="1" min="1" max="99"></div>
+      <div style="margin-top:8px">
+        <button class="admin-btn gold" onclick="adminCmd('teleport')">Teleport</button>
+        <button class="admin-btn gold" onclick="adminCmd('spawnBossNow')">Spawn Boss</button>
+        <button class="admin-btn" onclick="adminCmd('clearEnemies')">Clear Enemies</button>
+        <button class="admin-btn green" onclick="adminCmd('spawnEnemy3')">Spawn 3 Enemies</button>
+      </div>
+    </div>
+    <div class="admin-section">
+      <h3>🎒 Inventory Cheat</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">
+        <button class="admin-btn gold" onclick="adminCmd('giveAllGear')">Give All Gear</button>
+        <button class="admin-btn gold" onclick="adminCmd('give100Essence')">+100 Essence</button>
+        <button class="admin-btn green" onclick="adminCmd('give10Potions')">+10 Potions</button>
+        <button class="admin-btn" onclick="adminCmd('clearInv')">Clear Backpack</button>
+      </div>
+    </div>
+    <div class="admin-section">
+      <h3>📡 Admin Log</h3>
+      <div class="admin-log" id="adminLog"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Owner Panel (/ownerpanel) -->
+<div id="ownerPanel">
+  <div id="ownerBox">
+    <button onclick="closeOwner()" style="position:absolute;top:14px;right:18px;background:#333;color:#fff;border:none;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:12px;">✕</button>
+    <h2>👑 OWNER PANEL</h2>
+    <div class="ow-sub">GAME MASTER — RESTRICTED ACCESS</div>
+    <div class="owner-section">
+      <h3>📊 Live Stats</h3>
+      <div class="owner-stat">Total Players Online <span id="owOnline">1</span></div>
+      <div class="owner-stat">Game Version <span>3.0.0 — Open World RPG</span></div>
+      <div class="owner-stat">Highest Level Reached <span id="owMaxLv">—</span></div>
+      <div class="owner-stat">Total Kills This Session <span id="owKills">0</span></div>
+      <div class="owner-stat">Bosses Defeated <span id="owBoss">0</span></div>
+      <div class="owner-stat">Islands Unlocked <span id="owIslands">0</span></div>
+    </div>
+    <div class="owner-section">
+      <h3>⚙️ Game Config</h3>
+      <div class="admin-row" style="color:#ccc;font-size:12px"><label>Enemy Damage Multiplier</label><input class="owner-input" id="owDmgMult" type="number" value="1.0" step="0.1" min="0.1" max="5"></div>
+      <div class="admin-row" style="color:#ccc;font-size:12px"><label>XP Multiplier (global)</label><input class="owner-input" id="owXpMult" type="number" value="1.0" step="0.1" min="0.1" max="10"></div>
+      <div class="admin-row" style="color:#ccc;font-size:12px"><label>Loot Drop Rate</label><input class="owner-input" id="owLootRate" type="number" value="0.3" step="0.05" min="0" max="1"></div>
+      <div style="margin-top:8px">
+        <button class="owner-btn" onclick="applyOwnerConfig()">Apply Config</button>
+        <button class="owner-btn" onclick="ownerCmd('reset')">Reset Game</button>
+        <button class="owner-btn danger" onclick="ownerCmd('kickAll')">Force Menu</button>
+      </div>
+    </div>
+    <div class="owner-section">
+      <h3>📢 Broadcast Message</h3>
+      <div style="display:flex;gap:8px;margin-bottom:8px"><input class="owner-input" id="owMsg" type="text" placeholder="Message to all players..." style="flex:1;width:auto"><button class="owner-btn" onclick="ownerCmd('broadcast')">SEND</button></div>
+    </div>
+    <div class="owner-section">
+      <h3>💾 Save / Export</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <button class="owner-btn" onclick="ownerCmd('saveState')">Save Game State</button>
+        <button class="owner-btn" onclick="ownerCmd('exportLog')">Export Log</button>
+        <button class="owner-btn" onclick="ownerCmd('loadState')">Load Saved State</button>
+      </div>
+      <div id="owLog" style="background:#050510;border:1px solid #333;border-radius:4px;padding:8px;height:80px;overflow-y:auto;font-size:10px;color:#888;font-family:monospace;margin-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
